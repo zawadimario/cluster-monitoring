@@ -6591,6 +6591,8 @@ kind: ConfigMap
 metadata:
   name: grafana-custom-config
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   custom.ini: |
     # You can customize Grafana via changing context of this field.
@@ -6625,6 +6627,8 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-definition-knative-efficiency
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   knative-control-plane-efficiency-dashboard.json: |
     {
@@ -7125,7 +7129,11 @@ data:
           "7d",
           "30d"
         ]
-      }
+      },
+      "timezone": "",
+      "title": "Knative Serving - Control Plane Efficiency",
+      "uid": "1oI1URnik",
+      "version": 2
     }
 
 ---
@@ -7134,6 +7142,8 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-definition-knative-reconciler
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   knative-reconciler-dashboard.json: |
     {
@@ -7731,7 +7741,11 @@ data:
           "7d",
           "30d"
         ]
-      }
+      },
+      "timezone": "",
+      "title": "Knative - Reconciler",
+      "uid": "j0oFdEYiz",
+      "version": 10
     }
 
 ---
@@ -7754,6 +7768,8 @@ kind: ConfigMap
 metadata:
   name: scaling-config
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   scaling-dashboard.json: |
     {
@@ -9116,8 +9132,12 @@ data:
              "7d",
              "30d"
           ]
+       },
+       "timezone": "",
+       "title": "Knative Serving - Scaling Debugging",
+       "uid": "u_-9SIMiz",
+       "version": 2
        }
-      }
 
 ---
 # Copyright 2018 The Knative Authors
@@ -9139,6 +9159,8 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboard-definition-knative
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   revision-dashboard.json: |
     {
@@ -10024,7 +10046,11 @@ data:
           "7d",
           "30d"
         ]
-      }
+      },
+      "timezone": "",
+      "title": "Knative Serving - Revision HTTP Requests",
+      "uid": "im_gFbWik",
+      "version": 2
     }
   resource-dashboard.json: |
     {
@@ -10304,7 +10330,11 @@ data:
           "7d",
           "30d"
         ]
-      }
+      },
+      "timezone": "",
+      "title": "Knative Serving - Revision CPU and Memory Usage",
+      "uid": "bKOoE9Wmk",
+      "version": 4
     }
 
 ---
@@ -10327,6 +10357,8 @@ kind: ConfigMap
 metadata:
   name: grafana-datasources
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   prometheus.yaml: |
     datasources:
@@ -10343,26 +10375,10 @@ kind: ConfigMap
 metadata:
   name: grafana-dashboards
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 data:
   dashboards.yaml: |
-    - name: 'knative'
-      org_id: 1
-      folder: ''
-      type: file
-      options:
-        path: /grafana-dashboard-definition/knative
-    - name: 'knative-efficiency'
-      org_id: 1
-      folder: ''
-      type: file
-      options:
-        path: /grafana-dashboard-definition/knative-efficiency
-    - name: 'knative-reconciler'
-      org_id: 1
-      folder: ''
-      type: file
-      options:
-        path: /grafana-dashboard-definition/knative-reconciler
     - name: 'kubernetes-deployment'
       org_id: 1
       folder: ''
@@ -10417,12 +10433,6 @@ data:
       type: file
       options:
         path: /grafana-dashboard-definition/kubernetes-statefulset
-    - name: 'knative-serving-scaling'
-      org_id: 1
-      folder: ''
-      type: file
-      options:
-        path: /grafana-dashboard-definition/scaling
 ---
 apiVersion: v1
 kind: Service
@@ -10431,6 +10441,7 @@ metadata:
   namespace: monitoring
   labels:
     app: grafana
+    serving.knative.dev/release: "v0.18.0"
 spec:
   ports:
   - port: 30802
@@ -10445,7 +10456,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    app: grafana
+    serving.knative.dev/release: "v0.18.0"
 spec:
   replicas: 1
   selector:
@@ -10455,6 +10466,7 @@ spec:
     metadata:
       labels:
         app: grafana
+        serving.knative.dev/release: "v0.18.0"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -10570,6 +10582,7 @@ metadata:
   name: prometheus-scrape-config
   labels:
     name: prometheus-scrape-config
+    serving.knative.dev/release: "v0.18.0"
   namespace: monitoring
 data:
   prometheus.yml: |-
@@ -10989,6 +11002,7 @@ metadata:
   name: kube-controller-manager
   labels:
     app: kube-controller-manager
+    serving.knative.dev/release: "v0.18.0"
 spec:
   selector:
     k8s-app: kube-controller-manager
@@ -11008,6 +11022,7 @@ metadata:
   namespace: monitoring
   labels:
     app: prometheus
+    serving.knative.dev/release: "v0.18.0"
 spec:
   clusterIP: None
   ports:
@@ -11025,12 +11040,16 @@ kind: ServiceAccount
 metadata:
   name: prometheus-system
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: prometheus-system
   namespace: default
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 rules:
 - apiGroups: [""]
   resources:
@@ -11049,6 +11068,8 @@ kind: Role
 metadata:
   name: prometheus-system
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 rules:
 - apiGroups: [""]
   resources:
@@ -11067,6 +11088,8 @@ kind: Role
 metadata:
   name: prometheus-system
   namespace: kube-system
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 rules:
 - apiGroups: [""]
   resources:
@@ -11080,6 +11103,8 @@ kind: Role
 metadata:
   name: prometheus-system
   namespace: istio-system
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 rules:
 - apiGroups: [""]
   resources:
@@ -11099,6 +11124,8 @@ kind: ClusterRole
 metadata:
   name: prometheus-system
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 rules:
 - apiGroups: [""]
   resources:
@@ -11121,6 +11148,8 @@ kind: RoleBinding
 metadata:
   name: prometheus-system
   namespace: default
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -11135,6 +11164,8 @@ kind: RoleBinding
 metadata:
   name: prometheus-system
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -11149,6 +11180,8 @@ kind: RoleBinding
 metadata:
   name: prometheus-system
   namespace: kube-system
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -11163,6 +11196,8 @@ kind: RoleBinding
 metadata:
   name: prometheus-system
   namespace: istio-system
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -11176,6 +11211,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: prometheus-system
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -11190,6 +11227,8 @@ kind: Service
 metadata:
   name: prometheus-system-np
   namespace: monitoring
+  labels:
+    serving.knative.dev/release: "v0.18.0"
 spec:
   selector:
     app: prometheus
@@ -11203,7 +11242,7 @@ metadata:
   name: prometheus-system
   namespace: monitoring
   labels:
-    app: prometheus
+    serving.knative.dev/release: "v0.18.0"
 spec:
   replicas: 2
   podManagementPolicy: Parallel
@@ -11215,6 +11254,7 @@ spec:
     metadata:
       labels:
         app: prometheus
+        serving.knative.dev/release: "v0.18.0"
     spec:
       containers:
       - args:
