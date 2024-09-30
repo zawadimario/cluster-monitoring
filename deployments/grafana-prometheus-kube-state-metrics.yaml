@@ -6596,7 +6596,7 @@ metadata:
 data:
   custom.ini: |
     # You can customize Grafana via changing context of this field.
-    [auth.anonymous]
+    [auth.basic]
     # enable anonymous access
     enabled = true
     [security]
