@@ -10379,6 +10379,24 @@ metadata:
     serving.knative.dev/release: "v0.18.0"
 data:
   dashboards.yaml: |
+    - name: 'knative'
+      org_id: 1
+      folder: ''
+      type: file
+      options:
+        path: /grafana-dashboard-definition/knative
+    - name: 'knative-efficiency'
+      org_id: 1
+      folder: ''
+      type: file
+      options:
+        path: /grafana-dashboard-definition/knative-efficiency
+    - name: 'knative-reconciler'
+      org_id: 1
+      folder: ''
+      type: file
+      options:
+        path: /grafana-dashboard-definition/knative-reconciler
     - name: 'kubernetes-deployment'
       org_id: 1
       folder: ''
@@ -10433,6 +10451,12 @@ data:
       type: file
       options:
         path: /grafana-dashboard-definition/kubernetes-statefulset
+    - name: 'knative-serving-scaling'
+      org_id: 1
+      folder: ''
+      type: file
+      options:
+        path: /grafana-dashboard-definition/scaling
 ---
 apiVersion: v1
 kind: Service
