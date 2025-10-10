@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: mysql-secret
+type:
+data:
+  .username: cm9vdA==
+  .password: cm9vdA==
+  .dbuser: dGVjdGVs
+  .dbuserpass: dGVjdGVs
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysqlconf
+data:
+  custom.cnf: |
+    [mysqld]
+    character-set-server=utf8mb4
+    max_allowed_packet=1G
+    innodb_buffer_pool_size=1G
+    collation-server=utf8mb4_unicode_ci
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysqlinit
+data:
+  host: mysql.default.svc.cluster.local
+  createdb.sql: |
+    create database tectel;
+    grant all privileges on tectel.* to 'tectel'@'%';
+    create database recordings;
+    grant all privileges on recordings.* to 'tectel'@'%';
+    create table tectel.actor
+    (
+        ID int auto_increment,
+        FirstName  varchar(20) not null,
+        LastName   varchar(20) not null,
+        City varchar(20) default 'Tokyo' not null,
+        LastUpdate timestamp not null default current_timestamp on update current_timestamp,
+        constraint actor_pk
+            primary key (ID),
+        constraint actor_pk2
+            unique (FirstName, LastName)
+    );
+    create table recordings.album
+    (
+        ID int auto_increment not null,
+        Title varchar(128) not null,
+        Artist varchar(255) not null,
+        Price decimal(5, 2) not null,
+        LastUpdate timestamp not null default current_timestamp on update current_timestamp,
+        primary key (id),
+        unique key (title, artist, price)
+    );
+    insert into recordings.album
+    (Title, Artist, Price)
+    values
+        ('Blue Train', 'John Coltrane', 56.99),
+        ('Giant Steps', 'John Coltrane', 63.99),
+        ('Jeru', 'Gerry Mulligan', 17.99),
+        ('Sarah Vaughan', 'Sarah Vaughan', 34.98);
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: mysql
+      containers:
+        - image: mysql:9.4
+          name: mysql
+          imagePullPolicy: IfNotPresent
+          args:
+            - --disable-log-bin
+            - --authentication-policy=caching_sha2_password
+            - --datadir
+            - /var/lib/mysql
+          env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: .password
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: .dbuser
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-secret
+                key: .dbuserpass
+          - name: TZ
+            value: "Asia/Tokyo"
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysql-persistent-storage
+            - mountPath: /etc/mysql/conf.d
+              name: mysql-server-conf
+            - mountPath: /docker-entrypoint-initdb.d
+              name: mysql-server-initdb
+          resources:
+            requests:
+              cpu: 100m
+              memory: 800Mi
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
+      - name: mysql-server-conf
+        configMap:
+          name: mysqlconf
+      - name: mysql-server-initdb
+        configMap:
+          name: mysqlinit
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  type: NodePort
+  ports:
+    - port: 33060
+      protocol: TCP
+      targetPort: 33060
+  selector:
+    app: mysql
