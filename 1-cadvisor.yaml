@@ -1,22 +1,14 @@
-
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: obeservability
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cadvisor
-  namespace: obeservability
+  namespace: observability
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: cadvisor
-  namespace: obeservability
-  annotations:
-      seccomp.security.alpha.kubernetes.io/pod: 'docker/default'
+  namespace: observability
 spec:
   selector:
     matchLabels:
@@ -54,9 +46,9 @@ spec:
           mountPath: /dev/disk
           readOnly: true
         ports:
-          - name: http
-            containerPort: 8080
-            protocol: TCP
+        - name: http
+          containerPort: 8080
+          protocol: TCP
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       volumes:
@@ -75,3 +67,19 @@ spec:
       - name: disk
         hostPath:
           path: /dev/disk
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadvisor
+  namespace: observability
+  labels:
+    app: cadvisor
+spec:
+  selector:
+    name: cadvisor
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
