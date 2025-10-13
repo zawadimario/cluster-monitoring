@@ -13,18 +13,18 @@ To install this minimal solution simply run the following.
 kubectl create ns observability
 kustomize build | kubectl apply -f -
 ```
-Check if all pods are up and running as expected
+Check if all pods are up and running as expected.
 ```
 kubectl get po -n observability
 ```
 ### Endpoints
-All components are accessible via the web but you basically need only Grafana, Prometheus and optionally, alert manager
+All components are accessible via the web but you basically need only Grafana, Prometheus and optionally, alert manager.
 
-Obtain the K8s SVCs for the endpoints
+Obtain the K8s SVCs for the endpoints.
 ```
 kubectl get svc -n observability
 ```
-Should see alertmanager, cadvisor, grafana and prometheus services
+You should see alertmanager, cadvisor, grafana and prometheus services.
 
 ### Access UIs
 #### Prometheus

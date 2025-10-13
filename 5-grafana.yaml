@@ -39,6 +39,9 @@ spec:
             - containerPort: 3000
               name: http-grafana
               protocol: TCP
+          env:
+          - name: GF_METRICS_ENABLED
+            value: "true"
           readinessProbe:
             failureThreshold: 3
             httpGet:

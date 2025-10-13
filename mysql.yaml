@@ -152,11 +152,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql
+  name: mysql 
 spec:
   type: NodePort
   ports:
-    - port: 33060
+    - name: http
+      port: 33060
       protocol: TCP
       targetPort: 33060
   selector:

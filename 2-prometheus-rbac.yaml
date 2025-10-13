@@ -58,6 +58,7 @@ rules:
   - endpoints
   - pods
   - nodes/proxy
+  - pods/proxy
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources:
