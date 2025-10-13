@@ -157,8 +157,8 @@ spec:
   type: NodePort
   ports:
     - name: http
-      port: 33060
+      port: 3306
       protocol: TCP
-      targetPort: 33060
+      targetPort: 3306
   selector:
     app: mysql
