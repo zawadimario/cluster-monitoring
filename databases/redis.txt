@@ -1,0 +1,25 @@
+=============================================================
+                For IPv6
+=============================================================
+redis-cli -h :: -p 6379
+redis-cli -u redis://tectelUser:tectelUser123@[::]637
+ 
+
+ ============================================================
+                For IPv6
+ ============================================================
+redis-cli -u redis://tectelUser:tectelUser123@locahost:637
+
+redis-cli -h localhost -p 6379
+
+Then
+
+AUTH tectelUser tectelUser123
+PING >> PONG is a positive answer
+
+============================================================== 
+CONFIG GET databases
+ 
+INFO keyspace
+ 
+SELECT 1
