@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-postgres-data
+  namespace: postgres
+  labels:
+    tier: postgres-dabatase
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-postgress-db
+  namespace: postgres
+data:
+  POSTGRES_DB: tectel
+  persistence: |
+    connectionPool:
+      maxIdleConns: 100
+      maxOpenConns: 0
+      connMaxLifetime: 0s
+    nodeStatusOffLoad: true
+    archive: true
+    archiveTTL: 7d
+    postgresql:
+      host: svc-postgres-db.postgres.svc.cluster.local
+      port: 5432
+      database: tectel
+      tableName: tectel
+      userNameSecret:
+        name: secret-postgres-db
+        key: .username
+      passwordSecret:
+        name: secret-postgres-db
+        key: .password
+  retentionPolicy: |
+    completed: 10
+    failed: 3
+    errored: 3
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-postgres-db
+  namespace: postgres
+type: Opaque
+data:
+  .username: dGVjdGVsVXNlcg==
+  .password: dGVjdGVsVXNlcg==
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: postgres
+  labels:
+    tier: postgres-dabatase
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: postgres-dabatase
+  template:
+    metadata:
+      labels:
+        tier: postgres-dabatase
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - configMapRef:
+            name: configmap-postgress-db
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: configmap-postgress-db
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: secret-postgres-db
+              key: .username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secret-postgres-db
+              key: .password
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "tectelUser", "-d", "tectel"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 2
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: pgdata
+      volumes:
+      - name: pgdata
+        persistentVolumeClaim:
+          claimName: pvc-postgres-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-postgres-db
+  namespace: postgres
+spec:
+  type: ClusterIP
+  selector:
+    tier: postgres-dabatase
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
