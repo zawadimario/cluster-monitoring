@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: observability
+data:
+  grafana.ini: |-
+    [auth.ldap]
+    enabled = true
+    config_file = /etc/grafana/ldap.toml
+    allow_sign_up = true
+    skip_org_role_sync = true
+    allow_assign_grafana_admin = true
+    sync_ttl = 60
+    allow_assign_grafana_admin = true
+    login_attribute = "mail"
+    group_search_filter = "(&(objectClass=group)(member=%d))"
+    group_search_base_dns = ["ou=users,dc=techtel,dc=com"]
+    group_search_user_attribute = "(sn=%s)"
+    
+    [log]
+    filters = ldap:debug
+
+    [security]
+    admin_user = admin.test@techtel.com
+    admin_password = admin123
+  
+  ldap.toml: |-
+    [[servers]]
+    host = "openldap.auth"
+    port = 389
+    use_ssl = false
+    start_tls = false
+    ssl_skip_verify = true
+    bind_dn = "cn=adminuser,dc=techtel,dc=com"
+    bind_password = "admin123"
+    search_filter = "(sn=%s)"
+    search_base_dns = ["dc=techtel,dc=com"]
+  
+    [servers.attributes]
+    member_of = "memberOf"
+    email =  "email"
+    username  = "sn"
+    emailAttr = "mail"
+    nameAttr = "sn"
+  
+    [[servers.group_mappings]]
+    group_dn = "ou=users,dc=techtel,dc=com"
+    org_role = "Editor"
+    grafana_admin = false
+
+    [[servers.group_mappings]]
+    group_dn = "cn=admin.test,dc=techtel,dc=com"
+    org_role = "Admin"
+    grafana_admin = true
+  
+    [[servers.group_mappings]]
+    group_dn = "*"
+    org_role = "Viewer"
+
+  prometheus.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.observability:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: observability
+  labels:
+    tier: grafana
+  name: grafana
+spec:
+  selector:
+    matchLabels:
+      tier: grafana
+  template:
+    metadata:
+      labels:
+        tier: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+        supplementalGroups:
+          - 0
+      containers:
+        - image: grafana/grafana-oss:main
+          imagePullPolicy: IfNotPresent
+          name: grafana
+          ports:
+          - containerPort: 3000
+            name: http-grafana
+            protocol: TCP
+          env:
+          - name: GF_METRICS_ENABLED
+            value: "true"
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /robots.txt
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 2
+          resources:
+            limits:
+              memory: 4Gi
+            requests:
+              cpu: 100m
+              memory: 2Gi
+          volumeMounts:
+            - mountPath: /var/lib/grafana
+              name: grafana-pv
+            - name: grafana-config
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - mountPath: /etc/grafana/grafana.ini
+              name: grafana-config
+              subPath: grafana.ini
+              readOnly: true
+            - mountPath: /etc/grafana/ldap.toml
+              name: grafana-config
+              subPath: ldap.toml
+              readOnly: true
+      volumes:
+        - name: grafana-pv
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: grafana-config
+          configMap:
+            name: grafana-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: http-grafana
+  selector:
+    tier: grafana
+  sessionAffinity: None
+  type: NodePort

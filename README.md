@@ -6,9 +6,20 @@ This is a simple deployment for Kubernetes Cluster Monitoring
 2. Prometheus
 3. Alertmanager
 4. Grafana
+5. Optional OpenLDAP Server with users (**note that this is purely for testing**).
 
 ### Installation
 To install this minimal solution simply run the following.
+
+Install OpenLDAP (optional) if you are going to use it. Everything is pre-configured.
+
+```
+kubectl create ns auth
+kustomize build openldap | kubectl apply -f -
+```
+
+If you installed OpenLDAP, ensure to modify `kustomization.yaml` file to include `6-grafana-ldap.yaml`. Otherwise skip the previous step and this to the next one.
+
 ```
 kubectl create ns observability
 kustomize build | kubectl apply -f -
