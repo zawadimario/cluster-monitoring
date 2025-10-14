@@ -8,7 +8,7 @@ redis-cli -u redis://tectelUser:tectelUser123@[::]637
  ============================================================
                 For IPv6
  ============================================================
-redis-cli -u redis://tectelUser:tectelUser123@locahost:637
+redis-cli -u redis://tectelUser:tectelUser123@localhost:637
 
 redis-cli -h localhost -p 6379
 
