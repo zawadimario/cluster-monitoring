@@ -101,7 +101,7 @@ spec:
         readinessProbe:
           exec:
             command: ["pg_isready", "-U", "tectelUser", "-d", "tectel"]
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           timeoutSeconds: 2
         resources: {}
         volumeMounts:

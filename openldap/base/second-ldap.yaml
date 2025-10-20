@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: openldap-ui2
+  namespace: auth
+  labels:
+    name: openldap-ui2
+spec:
+  replicas: 1
+  serviceName: "openldap-ui2"
+  selector:
+    matchLabels:
+      name: openldap-ui2
+  template:
+    metadata:
+      labels:
+        name: openldap-ui2
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: openldap-ui
+        image: wheelybird/ldap-user-manager:v1.5
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: LDAP_BASE_DN
+          value: "dc=techtel,dc=com"
+        - name: LDAP_ADMIN_BIND_DN
+          value: "cn=adminuser,dc=techtel,dc=com"
+        - name: LDAP_ADMIN_BIND_PWD
+          value: "admin123"
+        - name: LDAP_URI
+          value: "ldap://openldap.auth:389"
+        - name: LDAP_IGNORE_CERT_ERRORS
+          value: "TRUE"
+        - name: LDAP_REQUIRE_STARTTLS
+          value: "FALSE"
+        - name: NO_HTTPS
+          value: "TRUE"
+        - name: LDAP_ADMINS_GROUP
+          value: "admins"
+        - name: SITE_NAME
+          value: "TechTel User Management"
+        - name: DEFAULT_USER_SHELL
+          value: "/bin/bash"
+        - name: EMAIL_DOMAIN
+          value: "techtel.com"
+        - name: PASSWORD_HASH
+          value: "SSHA"
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:  openldap-ui2
+  namespace: auth
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    name: openldap-ui2
+  type: NodePort

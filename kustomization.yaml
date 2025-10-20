@@ -3,5 +3,5 @@ resources:
 - 2-prometheus-rbac.yaml
 - 3-prometheus.yaml
 - 4-alertmanager.yaml
-- 5-grafana.yaml
-# - 6-grafana-ldap.yaml
+# - 5-grafana.yaml
+- 6-grafana-ldap.yaml
