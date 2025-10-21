@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+type: Opaque
+data:
+  accesskey: bWluaW8uYWRtaW5AdGVjaHRlbC5jb20=
+  secretkey: bWluaW9hZG1pbg==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  labels:
+    app: minio
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: minio
+      annotations:
+        sidecar.istio.io/inject: "false"
+        prometheus.io/path: "/minio/v2/metrics/"
+        prometheus.io/port: "9000"
+        prometheus.io/scrape: "true"
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: minio
+        # image: quay.io/minio/minio:RELEASE.2023-12-06T09-09-22Z
+        image: quay.io/minio/minio
+        args:
+        - server
+        - /data
+        - --console-address
+        - :9090
+        lifecycle:
+          postStart:
+            exec:
+              command: 
+              - "/bin/sh"
+              - "-c"
+              - |
+                sleep 3s
+                mc alias set minioserver http://localhost:9000 minio.admin@techtel.com minioadmin --api "s3v4" --path "auto"
+                mc idp ldap add minioserver/ server_addr="openldap.auth.svc.cluster.local:389" enable="on" server_insecure="on" user_dn_search_base_dn="dc=techtel,dc=com" user_dn_search_filter="(sn=%s)" group_search_base_dn="ou=users,dc=techtel,dc=com" group_search_filter="(&(objectClass=group)(member=%d))" lookup_bind_dn="cn=adminuser,dc=techtel,dc=com" lookup_bind_password="admin123"
+                mc admin service restart minioserver/
+                sleep 6s
+                mc idp ldap info minioserver/
+                mc idp ldap policy attach minioserver/ consoleAdmin --user='cn=minio.admin,ou=users,dc=techtel,dc=com'
+                mc idp ldap policy attach minioserver/ consoleAdmin --user='cn=zawadi.omari,ou=users,dc=techtel,dc=com'
+                mc idp ldap policy attach minioserver/ readwrite diagnostics --user='cn=techtel.dev,ou=users,dc=techtel,dc=com'
+                mc idp ldap policy attach minioserver/ readwrite diagnostics --user='cn=john.doe,ou=users,dc=techtel,dc=com'
+                mc idp ldap policy attach minioserver/ readwrite diagnostics --user='cn=jane.doe,ou=users,dc=techtel,dc=com'
+                mc idp ldap policy attach minioserver/ readwrite diagnostics --user='cn=edson.josh,ou=users,dc=techtel,dc=com'
+                sleep 2s
+                mc admin user ls minioserver
+        resources: {}
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: accesskey
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: secretkey
+        - name: MINIO_PROMETHEUS_AUTH_TYPE
+          value: "public"
+        ports:
+        - containerPort: 9000
+        - containerPort: 9090
+          name:  minio
+        volumeMounts:
+        - mountPath: /data
+          name: data
+          subPath: minio
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  - name: console-port
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: minio

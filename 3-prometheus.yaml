@@ -14,15 +14,48 @@ data:
     scrape_configs:
       - job_name: 'prometheus'
         static_configs:
-          - targets: ['localhost:9090']
-            labels:
-              tier: 'prometheus'
+        - targets: ['localhost:9090']
+          labels:
+            tier: 'prometheus'
 
       - job_name: 'cadvisor'
         static_configs:
-          - targets: ['cadvisor.observability.svc:8080']
-            labels:
-              name: 'cadvisor'
+        - targets: ['cadvisor.observability.svc:8080']
+          labels:
+            name: 'cadvisor'
+
+      - job_name: 'minio-cluser'
+        metrics_path: /minio/v2/metrics/cluster
+        scheme: http
+        static_configs:
+        - targets: ['minio-service.default:9000']
+          labels:
+            app: minio
+
+      - job_name: 'minio-resource'
+      
+        metrics_path: /minio/v2/metrics/resource
+        scheme: http
+        static_configs:
+        - targets: ['minio-service.default:9000']
+          labels:
+            app: minio
+
+      - job_name: 'minio-node'
+        metrics_path: /minio/v2/metrics/node
+        scheme: http
+        static_configs:
+        - targets: ['minio-service.default:9000']
+          labels:
+            app: minio
+
+      - job_name: 'minio-bucket'
+        metrics_path: /minio/v2/metrics/bucket
+        scheme: http
+        static_configs:
+        - targets: ['minio-service.default:9000']
+          labels:
+            app: minio
 
       - job_name: 'kubernetes-nodes'
         scheme: https
