@@ -37,7 +37,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
+      storage: 1Gi
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -79,6 +79,14 @@ spec:
         - name: TZ
           value: "UTC"
         resources: {}
+      - name: redis-exporter
+        image: oliver006/redis_exporter
+        args:
+        - "--redis.addr=localhost:6379"
+        - "--redis.password=tectelUser123"
+        - "--redis.user=tectelUser"
+        ports:
+        - containerPort: 9121
       volumes:
       - name: config
         configMap:
@@ -104,3 +112,6 @@ spec:
   - port: 16379
     targetPort: 16379
     name: gossip
+  - port: 9121
+    targetPort: 9121
+    name: metrics
