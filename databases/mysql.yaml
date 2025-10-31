@@ -4,7 +4,7 @@ metadata:
   name: mysql-pv-claim
 spec:
   accessModes:
-    - ReadWriteMany
+  - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
@@ -13,7 +13,7 @@ kind: Secret
 apiVersion: v1
 metadata:
   name: mysql-secret
-type:
+type: Opaque
 data:
   .username: cm9vdA==
   .password: cm9vdA==
@@ -28,25 +28,24 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mysqlconf
+  name: mysqlinit-configs
 data:
+  host: mysql.default.svc.cluster.local
   custom.cnf: |
     [mysqld]
     character-set-server=utf8mb4
     max_allowed_packet=1G
     innodb_buffer_pool_size=1G
     collation-server=utf8mb4_unicode_ci
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mysqlinit
-data:
-  host: mysql.default.svc.cluster.local
+
   createdb.sql: |
-    create database tectel;
+    create user if not exists 'exporter'@'%' identified by 'exporter' with max_user_connections 3;
+    grant process, replication client, select on *.* to 'exporter'@'%';
+    flush privileges;
+    create database if not exists tectel;
+    create database if not exists recordings;
+    create user if not exists 'tectel'@'%' identified by 'tectel';
     grant all privileges on tectel.* to 'tectel'@'%';
-    create database recordings;
     grant all privileges on recordings.* to 'tectel'@'%';
     create table tectel.actor
     (
@@ -77,6 +76,11 @@ data:
         ('Giant Steps', 'John Coltrane', 63.99),
         ('Jeru', 'Gerry Mulligan', 17.99),
         ('Sarah Vaughan', 'Sarah Vaughan', 34.98);
+
+  exporter-custom.cnf: |
+    [client]
+    user=exporter
+    password=exporter
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -99,66 +103,89 @@ spec:
     spec:
       serviceAccountName: mysql
       containers:
-        - image: mysql:9.4
-          name: mysql
-          imagePullPolicy: IfNotPresent
-          args:
-            - --disable-log-bin
-            - --authentication-policy=caching_sha2_password
-            - --datadir
-            - /var/lib/mysql
-          env:
-          - name: MYSQL_ROOT_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secret
-                key: .password
-          - name: MYSQL_USER
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secret
-                key: .dbuser
-          - name: MYSQL_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mysql-secret
-                key: .dbuserpass
-          - name: TZ
-            value: "Asia/Tokyo"
-          ports:
-            - containerPort: 3306
-          volumeMounts:
-            - mountPath: /var/lib/mysql
-              name: mysql-persistent-storage
-            - mountPath: /etc/mysql/conf.d
-              name: mysql-server-conf
-            - mountPath: /docker-entrypoint-initdb.d
-              name: mysql-server-initdb
-          resources:
-            requests:
-              cpu: 100m
-              memory: 800Mi
+      - image: mysql:9.4
+        name: mysql
+        imagePullPolicy: IfNotPresent
+        args:
+        - --disable-log-bin
+        - --authentication-policy=caching_sha2_password
+        - --datadir
+        - /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: .password
+        - name: TZ
+          value: "Asia/Tokyo"
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+        - mountPath: /etc/mysql/conf.d/custom.cnf
+          name: mysql-server
+          subPath: custom.cnf
+          readOnly: true
+        - mountPath: /docker-entrypoint-initdb.d/createdb.sql
+          name: mysql-server
+          subPath: createdb.sql
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 800Mi
+      - name: mysqld-exporter
+        image: prom/mysqld-exporter
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.my-cnf=/etc/mysql/conf.d/custom.cnf
+        ports:
+        - containerPort: 9104
+          name: metrics
+        env:
+        - name: DATA_SOURCE_NAME
+          value: "exporter:exporter@(mysql:3306)/"
+        - name: MYSQLD_EXPORTER_PASSWORD
+          value: "exporter"
+        - name: TZ
+          value: "Asia/Tokyo"
+        volumeMounts:
+        - mountPath: /etc/mysql/conf.d/custom.cnf
+          name: mysql-exporter
+          subPath: custom.cnf
       volumes:
       - name: mysql-persistent-storage
         persistentVolumeClaim:
           claimName: mysql-pv-claim
-      - name: mysql-server-conf
+      - name: mysql-server
         configMap:
-          name: mysqlconf
-      - name: mysql-server-initdb
+          name: mysqlinit-configs
+          items:
+          - key: custom.cnf
+            path: custom.cnf
+          - key: createdb.sql
+            path: createdb.sql
+      - name: mysql-exporter
         configMap:
-          name: mysqlinit
+          name: mysqlinit-configs
+          items:
+          - key: exporter-custom.cnf
+            path: custom.cnf
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: mysql 
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - name: http
-      port: 3306
-      protocol: TCP
-      targetPort: 3306
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  - name: metrics
+    port: 9104
+    targetPort: 9104
   selector:
     app: mysql
