@@ -14,7 +14,7 @@ data:
       - job_name: 'prometheus'
         scrape_interval: 10s
         static_configs:
-        - targets: ['localhost:9090']
+        - targets: ['prometheus.observability:9090']
           labels:
             tier: 'prometheus'
 
@@ -25,7 +25,21 @@ data:
         tls_config:
           insecure_skip_verify: true
         static_configs:
-          - targets: ["svc-redis-server.redis:9121"]
+        - targets: ["svc-redis-server.redis:9121"]
+
+      - job_name: 'mysql-server'
+        metrics_path: /probe
+        params:
+        static_configs:
+        - targets:
+          - mysql.default:3306
+        relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: mysql.default:9104
 
       - job_name: 'cadvisor'
         static_configs:
@@ -34,6 +48,7 @@ data:
             name: 'cadvisor'
 
       - job_name: 'minio-cluser'
+        scrape_interval: 30s
         metrics_path: /minio/v2/metrics/cluster
         scheme: http
         static_configs:
@@ -42,7 +57,7 @@ data:
             app: minio
 
       - job_name: 'minio-resource'
-      
+        scrape_interval: 30s
         metrics_path: /minio/v2/metrics/resource
         scheme: http
         static_configs:
@@ -51,6 +66,7 @@ data:
             app: minio
 
       - job_name: 'minio-node'
+        scrape_interval: 30s
         metrics_path: /minio/v2/metrics/node
         scheme: http
         static_configs:
@@ -59,6 +75,7 @@ data:
             app: minio
 
       - job_name: 'minio-bucket'
+        scrape_interval: 30s
         metrics_path: /minio/v2/metrics/bucket
         scheme: http
         static_configs:
@@ -67,6 +84,7 @@ data:
             app: minio
 
       - job_name: 'kubernetes-nodes'
+        scrape_interval: 15s
         scheme: https
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -92,46 +110,48 @@ data:
           insecure_skip_verify: true
         bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         kubernetes_sd_configs:
-          - role: node
+        - role: node
         relabel_configs:
-          - action: labelmap
-            regex: __meta_kubernetes_node_label_(.+)
-          - target_label: __address__
-            replacement: kubernetes.default.svc:443
-          - source_labels: [__meta_kubernetes_node_name]
-            regex: (.+)
-            target_label: __metrics_path__
-            replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
 
       - job_name: "kubernetes-services"
+        scrape_interval: 30s
         scheme: http
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: true
         bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         kubernetes_sd_configs:
-          - role: endpoints
+        - role: endpoints
         relabel_configs:
-          - action: labelmap
-            regex: __meta_kubernetes_service_label_(.+)
-          - source_labels: [__meta_kubernetes_service_name]
-            target_label: service
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-            target_label: prometheus_io_scrape
-            action: replace
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            regex: .*
-            action: keep
-          - source_labels: [__meta_kubernetes_namespace]
-            regex: kube-system|kube-public|kube-node-lease
-            action: drop
-          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
-            regex: default;kubernetes
-            action: drop
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_service_name]
+          target_label: service
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          target_label: prometheus_io_scrape
+          action: replace
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          regex: .*
+          action: keep
+        - source_labels: [__meta_kubernetes_namespace]
+          regex: kube-system|kube-public|kube-node-lease
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: default;kubernetes
+          action: drop
      
       - job_name: 'kube-proxy'
+        scrape_interval: 30s
         kubernetes_sd_configs:
         - role: node
         relabel_configs:
@@ -143,6 +163,7 @@ data:
           replacement: /metrics
               
       - job_name: 'kube-dns'
+        scrape_interval: 30s
         kubernetes_sd_configs:
         - role: endpoints
           namespaces:
@@ -153,6 +174,7 @@ data:
           action: keep
 
       - job_name: "kubernetes-apiservers"
+        scrape_interval: 30s
         kubernetes_sd_configs:
         - role: endpoints
         scheme: https
@@ -167,6 +189,7 @@ data:
           regex: default;kubernetes;https
 
       - job_name: "application-pods"
+        scrape_interval: 30s
         kubernetes_sd_configs:
         - role: pod
         relabel_configs:
@@ -183,6 +206,7 @@ data:
           action: drop
 
       - job_name: "kubernetes-service-endpoints"
+        scrape_interval: 30s
         scheme: http
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -216,7 +240,7 @@ data:
       alertmanagers:
       - static_configs:
         - targets:
-          - alertmanager.observability.svc.cluster.local:9093
+          - alertmanager.observability:9093
     rule_files:
     - "alert-rules.yml"
   alert-rules.yml: |
@@ -231,7 +255,7 @@ data:
             severity: warning
           annotations:
             summary: "Service down on a weekday"
-            description: "The 'up' metric is 0, meaning a target is down, but only triggers on weekdays (Mon–Fri)."
+            description: "The 'up' metric is 0, meaning a target is down, but only triggers on weekdays (Mon-Fri)."
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -250,25 +274,25 @@ spec:
     spec:
       serviceAccountName: prometheus
       containers:
-        - name: prometheus
-          image: prom/prometheus:latest
-          args:
-          - --config.file=/etc/prometheus/prometheus.yml
-          - --storage.tsdb.path=/prometheus
-          - --storage.tsdb.retention.time=2d
-          - --storage.tsdb.no-lockfile
-          - --web.enable-lifecycle
-          - --web.route-prefix=/
-          ports:
-          - containerPort: 9090
-          resources:
-            limits:
-              memory: 2000Mi
-          volumeMounts:
-          - name: config-volume
-            mountPath: /etc/prometheus
-          - name: prometheus-storage
-            mountPath: /prometheus
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --storage.tsdb.retention.time=2d
+        - --storage.tsdb.no-lockfile
+        - --web.enable-lifecycle
+        - --web.route-prefix=/
+        ports:
+        - containerPort: 9090
+        resources:
+          limits:
+            memory: 2000Mi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
       volumes:
       - name: config-volume
         configMap:
@@ -287,7 +311,7 @@ spec:
   selector:
     tier: prometheus
   ports:
-    - port: 9090
-      protocol: TCP
-      targetPort: 9090
-      nodePort: 30090
+  - port: 9090
+    protocol: TCP
+    targetPort: 9090
+    nodePort: 30090
