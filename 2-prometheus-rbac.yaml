@@ -64,7 +64,7 @@ rules:
   - endpoints
   - namespaces
   - pods
-  - deplouyments
+  - deployments
   - replicasets
   - statefulsets
   - daemonsets
