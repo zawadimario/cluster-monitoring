@@ -7,12 +7,12 @@ data:
   prometheus.yaml: |-
     apiVersion: 1
     datasources:
-      - name: Prometheus
-        type: prometheus
-        access: proxy
-        url: http://prometheus.observability:9090
-        isDefault: true
-        editable: true
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus.observability:9090
+      isDefault: true
+      editable: true
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -47,45 +47,45 @@ spec:
         supplementalGroups:
           - 0
       containers:
-        - image: grafana/grafana-oss:main
-          imagePullPolicy: IfNotPresent
-          name: grafana
-          ports:
-          - containerPort: 3000
-            name: http-grafana
-            protocol: TCP
-          env:
-          - name: GF_METRICS_ENABLED
-            value: "true"
-          readinessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /robots.txt
-              port: 3000
-              scheme: HTTP
-            initialDelaySeconds: 10
-            periodSeconds: 30
-            successThreshold: 1
-            timeoutSeconds: 2
-          resources:
-            limits:
-              memory: 4Gi
-            requests:
-              cpu: 100m
-              memory: 2Gi
-          volumeMounts:
-            - mountPath: /var/lib/grafana
-              name: grafana-pv
-            - name: grafana-datasources
-              mountPath: /etc/grafana/provisioning/datasources
-              readOnly: true
+      - image: grafana/grafana-oss:main
+        imagePullPolicy: IfNotPresent
+        name: grafana
+        ports:
+        - containerPort: 3000
+          name: http-grafana
+          protocol: TCP
+        env:
+        - name: GF_METRICS_ENABLED
+          value: "true"
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /robots.txt
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            memory: 4Gi
+          requests:
+            cpu: 100m
+            memory: 2Gi
+        volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: grafana-pv
+          - name: grafana-datasources
+            mountPath: /etc/grafana/provisioning/datasources
+            readOnly: true
       volumes:
-        - name: grafana-pv
-          persistentVolumeClaim:
-            claimName: grafana-pvc
-        - name: grafana-datasources
-          configMap:
-            name: grafana-datasources
+      - name: grafana-pv
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
 ---
 apiVersion: v1
 kind: Service
