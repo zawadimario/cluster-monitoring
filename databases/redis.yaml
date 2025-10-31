@@ -80,7 +80,7 @@ spec:
           value: "UTC"
         resources: {}
       - name: redis-exporter
-        image: oliver006/redis_exporter
+        image: bitnami/redis_exporter
         args:
         - "--redis.addr=localhost:6379"
         - "--redis.password=tectelUser123"
