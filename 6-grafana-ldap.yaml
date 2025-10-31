@@ -71,12 +71,12 @@ data:
   prometheus.yaml: |-
     apiVersion: 1
     datasources:
-      - name: Prometheus
-        type: prometheus
-        access: proxy
-        url: http://prometheus.observability:9090
-        isDefault: true
-        editable: true
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus.observability:9090
+      isDefault: true
+      editable: true
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -85,7 +85,7 @@ metadata:
   namespace: observability
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
@@ -110,70 +110,70 @@ spec:
         fsGroup: 472
         supplementalGroups:
           - 0
-      # initContainers:
-      #   - name: install-grafana-plugins
-      #     image: grafana/grafana-oss:main
-      #     securityContext:
-      #       runAsUser: 0
-      #     command:
-      #       - sh
-      #       - -c
-      #       - |
-      #         set -eux
-      #         grafana cli --insecure --pluginUrl https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/release/main/any/grafana-lokiexplore-app-main.zip plugins install grafana-lokiexplore-app
-      #         grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-pyroscope-app/release/1.10.1/grafana-pyroscope-app-1.10.1.zip plugins install grafana-pyroscope-app
-      #         grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-exploretraces-app/release/1.2.0/grafana-exploretraces-app-1.2.0.zip plugins install grafana-exploretraces-app
-      #         grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-metricsdrilldown-app/release/1.0.18/grafana-metricsdrilldown-app-1.0.18.zip plugins install grafana-metricsdrilldown-app
-      #     volumeMounts:
-      #     - name: grafana-plugins
-      #       mountPath: /var/lib/grafana/plugins
-      containers:
-        - image: grafana/grafana-oss:main
-          imagePullPolicy: IfNotPresent
-          name: grafana
-          ports:
-          - containerPort: 3000
-            name: http-grafana
-            protocol: TCP
-          env:
-          - name: GF_METRICS_ENABLED
-            value: "true"
-          readinessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /robots.txt
-              port: 3000
-              scheme: HTTP
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 2
-          resources: {}
-          volumeMounts:
-            - mountPath: /var/lib/grafana
-              name: grafana-pv
-            - name: grafana-config
-              mountPath: /etc/grafana/provisioning/datasources
-              readOnly: true
-            - mountPath: /etc/grafana/grafana.ini
-              name: grafana-config
-              subPath: grafana.ini
-              readOnly: true
-            - mountPath: /etc/grafana/ldap.toml
-              name: grafana-config
-              subPath: ldap.toml
-              readOnly: true
-            - mountPath: /var/lib/grafana/plugins
-              name: grafana-plugins
-      volumes:
-        - name: grafana-pv
-          persistentVolumeClaim:
-            claimName: grafana-pvc
-        - name: grafana-config
-          configMap:
-            name: grafana-config
+      initContainers:
+      - name: install-grafana-plugins
+        image: grafana/grafana-oss:main
+        securityContext:
+          runAsUser: 0
+        command:
+          - sh
+          - -c
+          - |
+            set -eux
+            grafana cli --insecure --pluginUrl https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/release/main/any/grafana-lokiexplore-app-main.zip plugins install grafana-lokiexplore-app
+            grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-pyroscope-app/release/1.10.1/grafana-pyroscope-app-1.10.1.zip plugins install grafana-pyroscope-app
+            grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-exploretraces-app/release/1.2.0/grafana-exploretraces-app-1.2.0.zip plugins install grafana-exploretraces-app
+            grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-metricsdrilldown-app/release/1.0.18/grafana-metricsdrilldown-app-1.0.18.zip plugins install grafana-metricsdrilldown-app
+        volumeMounts:
         - name: grafana-plugins
-          emptyDir: {}
+          mountPath: /var/lib/grafana/plugins
+      containers:
+      - image: grafana/grafana-oss:main
+        imagePullPolicy: IfNotPresent
+        name: grafana
+        ports:
+        - containerPort: 3000
+          name: http-grafana
+          protocol: TCP
+        env:
+        - name: GF_METRICS_ENABLED
+          value: "true"
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /robots.txt
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-pv
+        - name: grafana-config
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - mountPath: /etc/grafana/grafana.ini
+          name: grafana-config
+          subPath: grafana.ini
+          readOnly: true
+        - mountPath: /etc/grafana/ldap.toml
+          name: grafana-config
+          subPath: ldap.toml
+          readOnly: true
+        - mountPath: /var/lib/grafana/plugins
+          name: grafana-plugins
+      volumes:
+      - name: grafana-pv
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+      - name: grafana-plugins
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
