@@ -13,37 +13,6 @@ spec:
       storage: 1Gi
 ---
 apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: configmap-postgress-db
-  namespace: postgres
-data:
-  POSTGRES_DB: tectel
-  persistence: |
-    connectionPool:
-      maxIdleConns: 100
-      maxOpenConns: 0
-      connMaxLifetime: 0s
-    nodeStatusOffLoad: true
-    archive: true
-    archiveTTL: 7d
-    postgresql:
-      host: svc-postgres-db.postgres.svc.cluster.local
-      port: 5432
-      database: tectel
-      tableName: tectel
-      userNameSecret:
-        name: secret-postgres-db
-        key: .username
-      passwordSecret:
-        name: secret-postgres-db
-        key: .password
-  retentionPolicy: |
-    completed: 10
-    failed: 3
-    errored: 3
----
-apiVersion: v1
 kind: Secret
 metadata:
   name: secret-postgres-db
@@ -79,15 +48,9 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5432
-        envFrom:
-        - configMapRef:
-            name: configmap-postgress-db
         env:
         - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: configmap-postgress-db
-              key: POSTGRES_DB
+          value: "tectel"
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -98,11 +61,8 @@ spec:
             secretKeyRef:
               name: secret-postgres-db
               key: .password
-        readinessProbe:
-          exec:
-            command: ["pg_isready", "-U", "tectelUser", "-d", "tectel"]
-          initialDelaySeconds: 5
-          timeoutSeconds: 2
+        - name: TZ
+          value: "Asia/Tokyo"
         resources: {}
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
@@ -125,3 +85,74 @@ spec:
   - protocol: TCP
     port: 5432
     targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-exporter
+  namespace: postgres
+  labels:
+    app: postgres-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-exporter
+  template:
+    metadata:
+      labels:
+        app: postgres-exporter
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: postgres-exporter
+        image: quay.io/prometheuscommunity/postgres-exporter
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: DATA_SOURCE_URI
+          value: "svc-postgres-db.postgres.svc.cluster.local:5432/tectel?sslmode=disable"
+        - name: DATA_SOURCE_USER
+          valueFrom:
+            secretKeyRef:
+              name: secret-postgres-db
+              key: .username
+        - name: DATA_SOURCE_PASS
+          valueFrom:
+            secretKeyRef:
+              name: secret-postgres-db
+              key: .password
+        ports:
+        - containerPort: 9187
+          name: metrics
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9187
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-exporter
+  namespace: postgres
+  labels:
+    app: postgres-exporter
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-exporter
+  ports:
+    - name: metrics
+      port: 9187
+      targetPort: 9187
