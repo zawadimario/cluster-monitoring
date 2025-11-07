@@ -18,21 +18,16 @@ data:
           labels:
             tier: 'prometheus'
 
-      - job_name: 'redis-server'
+      - job_name: 'redis-exporter'
         scrape_interval: 30s
         metrics_path: /metrics
-        scheme: http
-        tls_config:
-          insecure_skip_verify: true
         static_configs:
         - targets: ["svc-redis-server.redis:9121"]
 
-      - job_name: 'mysql-server'
+      - job_name: 'mysqld-exporter'
         metrics_path: /probe
-        params:
         static_configs:
-        - targets:
-          - mysql.default:3306
+        - targets: ['mysql.default:3306']
         relabel_configs:
         - source_labels: [__address__]
           target_label: __param_target
@@ -41,16 +36,21 @@ data:
         - target_label: __address__
           replacement: mysql.default:9104
 
+      - job_name: 'postgres-exporter'
+        scrape_interval: 15s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ['postgres-exporter.postgres:9187']
+
       - job_name: 'cadvisor'
         static_configs:
         - targets: ['cadvisor.observability.svc:8080']
           labels:
             name: 'cadvisor'
 
-      - job_name: 'minio-cluser'
+      - job_name: 'minio-cluster'
         scrape_interval: 30s
         metrics_path: /minio/v2/metrics/cluster
-        scheme: http
         static_configs:
         - targets: ['minio-service.default:9000']
           labels:
@@ -59,7 +59,6 @@ data:
       - job_name: 'minio-resource'
         scrape_interval: 30s
         metrics_path: /minio/v2/metrics/resource
-        scheme: http
         static_configs:
         - targets: ['minio-service.default:9000']
           labels:
@@ -68,7 +67,6 @@ data:
       - job_name: 'minio-node'
         scrape_interval: 30s
         metrics_path: /minio/v2/metrics/node
-        scheme: http
         static_configs:
         - targets: ['minio-service.default:9000']
           labels:
@@ -77,7 +75,6 @@ data:
       - job_name: 'minio-bucket'
         scrape_interval: 30s
         metrics_path: /minio/v2/metrics/bucket
-        scheme: http
         static_configs:
         - targets: ['minio-service.default:9000']
           labels:
@@ -149,6 +146,9 @@ data:
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
           regex: default;kubernetes
           action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: postgres;svc-postgres-db
+          action: drop
      
       - job_name: 'kube-proxy'
         scrape_interval: 30s
@@ -204,6 +204,9 @@ data:
         - source_labels: [__meta_kubernetes_namespace]
           regex: kube-system|kube-public|kube-node-lease
           action: drop
+        - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
+          regex: postgres;postgres-0
+          action: drop
 
       - job_name: "kubernetes-service-endpoints"
         scrape_interval: 30s
@@ -234,6 +237,9 @@ data:
           action: drop
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
           regex: default;kubernetes
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: postgres;svc-postgres-db
           action: drop
 
     alerting:
