@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: patronitectel-config
+  namespace: tectelio
+  labels:
+    application: patroni
+    cluster-name: patronitectel
+spec:
+  clusterIP: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: &cluster_name patronitectel
+  labels:
+    application: patroni
+    cluster-name: *cluster_name
+subsets: []
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: &cluster_name patronitectel
+  namespace: tectelio
+  labels:
+    application: patroni
+    cluster-name: *cluster_name
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: patronitectel-repl
+  namespace: tectelio
+  labels:
+    application: patroni
+    cluster-name:  &cluster_name patronitectel
+    role: replica
+spec:
+  type: ClusterIP
+  selector:
+    application: patroni
+    cluster-name: *cluster_name
+    role: replica
+  ports:
+  - port: 5432
+    targetPort: 5432
