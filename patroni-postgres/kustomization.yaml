@@ -1,0 +1,5 @@
+resources:
+  - rbac.yaml
+  - services.yaml
+  - statefulset.yaml
+  - postgres-exporter.yaml
