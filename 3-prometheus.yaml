@@ -42,6 +42,12 @@ data:
         static_configs:
         - targets: ['postgres-exporter.postgres:9187']
 
+      - job_name: 'postgres-patroni-exporter'
+        scrape_interval: 30s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ['patroni-postgres-exporter.tectelio:9187']
+
       - job_name: 'cadvisor'
         static_configs:
         - targets: ['cadvisor.observability.svc:8080']
@@ -147,7 +153,10 @@ data:
           regex: default;kubernetes
           action: drop
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
-          regex: postgres;svc-postgres-db
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: tectelio;.*
           action: drop
      
       - job_name: 'kube-proxy'
@@ -205,7 +214,10 @@ data:
           regex: kube-system|kube-public|kube-node-lease
           action: drop
         - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
-          regex: postgres;postgres-0
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
+          regex: tectelio;.*
           action: drop
 
       - job_name: "kubernetes-service-endpoints"
@@ -239,7 +251,10 @@ data:
           regex: default;kubernetes
           action: drop
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
-          regex: postgres;svc-postgres-db
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: tectelio;.*
           action: drop
 
     alerting:
