@@ -22,6 +22,9 @@ metadata:
     application: patroni
     cluster-name: *cluster_name
 spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   replicas: 3
   serviceName: *cluster_name
   selector:
@@ -93,7 +96,19 @@ spec:
             - name: TZ
               value: "Asia/Tokyo"
       terminationGracePeriodSeconds: 0
-      volumes:
-      - name: pgdata
-        persistentVolumeClaim:
-          claimName: tectel-patroni-pgdata
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        application: tectel-patroni
+        cluster-name: tectelpatroni
+      name: pgdata
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 8Gi
