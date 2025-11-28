@@ -7002,6 +7002,10 @@ spec:
           image: quay.io/calico/cni:v3.31.2
           imagePullPolicy: IfNotPresent
           command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+          ports:
+          - name: metrics
+            containerPort: 9091
+            hostPort: 9091
           envFrom:
             - configMapRef:
                 name: kubernetes-services-endpoint
@@ -7316,6 +7320,7 @@ spec:
           securityContext:
             runAsNonRoot: true
 ---
+# Just for metrics, otherwise not needed
 apiVersion: v1
 kind: Service
 metadata:
