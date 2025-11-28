@@ -24,6 +24,13 @@ data:
         static_configs:
         - targets: ["svc-redis-server.redis:9121"]
 
+      - job_name: 'calico-felix'
+        scrape_interval: 30s
+        metrics_path: /metrics
+        static_configs:
+        - targets:
+          - "calico-felix-metrics.kube-system.svc.cluster.local:9091"
+
       - job_name: 'mysqld-exporter'
         metrics_path: /probe
         static_configs:
