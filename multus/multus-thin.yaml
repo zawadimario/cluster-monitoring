@@ -110,6 +110,12 @@ data:
       "binDir": "/opt/cni/bin",
       "logFile": "/var/log/multus.log",
       "logLevel": "debug",
+      "logOptions": {
+        "maxAge": 5,
+        "maxSize": 100,
+        "maxBackups": 5,
+        "compress": true
+      },
       "multusNamespace": "kube-system",
       "capabilities": {
         "portMappings": true
@@ -210,8 +216,9 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
         args:
-        - "--multus-conf-file=auto"
-        - "cni-version=0.3.1"
+        - --multus-conf-file=auto
+        - --cni-version=0.3.1
+        - --cleanup-config-on-exit=true
         resources:
           requests:
             cpu: "100m"
@@ -235,10 +242,7 @@ spec:
           command:
           - /bin/bash
           - -c
-          - unlink /host/opt/cni/bin/multus; cp /usr/src/multus-cni/bin/multus /host/opt/cni/bin/multus
-          # args:
-          #   - "--type"
-          #   - "thin"
+          - rm -f /host/opt/cni/bin/multus; cp /usr/src/multus-cni/bin/multus /host/opt/cni/bin/multus
           resources:
             requests:
               cpu: "10m"
@@ -247,21 +251,21 @@ spec:
             privileged: true
           terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
-            - name: cnibin
-              mountPath: /host/opt/cni/bin
-              mountPropagation: Bidirectional
+          - name: cnibin
+            mountPath: /host/opt/cni/bin
+            mountPropagation: Bidirectional
       terminationGracePeriodSeconds: 10
       volumes:
-        - name: cni
-          hostPath:
-            path: /etc/cni/net.d
-        - name: cnibin
-          hostPath:
-            path: /opt/cni/bin
-        - name: multus-cfg
-          configMap:
-            name: multus-cni-config
-            defaultMode: 420
-            items:
-            - key: cni-conf.json
-              path: 70-multus.conf
+      - name: cni
+        hostPath:
+          path: /etc/cni/net.d
+      - name: cnibin
+        hostPath:
+          path: /opt/cni/bin
+      - name: multus-cfg
+        configMap:
+          name: multus-cni-config
+          defaultMode: 420
+          items:
+          - key: cni-conf.json
+            path: 70-multus.conf
