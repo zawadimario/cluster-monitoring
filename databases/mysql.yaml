@@ -132,10 +132,10 @@ spec:
           name: mysql-server
           subPath: createdb.sql
           readOnly: true
-        resources:
-          requests:
-            cpu: 100m
-            memory: 800Mi
+        resources: {}
+          # requests:
+          #   cpu: 100m
+          #   memory: 800Mi
       - name: mysqld-exporter
         image: prom/mysqld-exporter
         imagePullPolicy: IfNotPresent
