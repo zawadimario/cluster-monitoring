@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-case-02
+  annotations:
+    k8s.v1.cni.cncf.io/networks: test-multus
+spec:
+  containers:
+  - name: pod-case-02
+    image: docker.io/centos/tools:latest
+    command:
+    - /sbin/init
