@@ -41,7 +41,7 @@ data:
   veth_mtu: "1500"
   cni_network_config: |-
     {
-      "name": "k8s-pod-network",
+      "name": "calico",
       "cniVersion": "0.3.1",
       "plugins": [
         {
@@ -7138,6 +7138,10 @@ spec:
               value: "Never"
             - name: CALICO_IPV6POOL_VXLAN
               value: "Never"
+            - name: CALICO_ROUTER_ID
+              value: hash
+            - name: FELIX_IPTABLESBACKEND
+              value: Auto
             - name: FELIX_IPINIPMTU
               valueFrom:
                 configMapKeyRef:
@@ -7298,10 +7302,10 @@ spec:
           image: quay.io/calico/kube-controllers:v3.31.2
           imagePullPolicy: IfNotPresent
           env:
-            - name: ENABLED_CONTROLLERS
-              value: node,loadbalancer
-            - name: DATASTORE_TYPE
-              value: kubernetes
+          - name: ENABLED_CONTROLLERS
+            value: node
+          - name: DATASTORE_TYPE
+            value: kubernetes
           livenessProbe:
             exec:
               command:
@@ -7320,7 +7324,6 @@ spec:
           securityContext:
             runAsNonRoot: true
 ---
-# Just for metrics, otherwise not needed
 apiVersion: v1
 kind: Service
 metadata:
