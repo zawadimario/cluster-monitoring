@@ -12,7 +12,7 @@ data:
     CMD ["python", "-c", "print('Hello World')"]
   Dockerfile.golang: |
     FROM golang:1.23-alpine
-    CMD sh -c 'echo "package main; import \"fmt\"; func main(){fmt.Println(\"Hello World\")}" | go run -'
+    CMD sh -c 'echo "package main; import \"fmt\"; func main(){fmt.Println(\"Hello World\")}" > main.go && go run main.go'
 
 # docker build -t ping --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.ping .
 # docker build -t hello-golang --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.golang .
@@ -46,7 +46,8 @@ spec:
     - name: dind-storage
       mountPath: /var/lib/docker
     - name: dockerfile-volume
-      mountPath: /tmp
+      mountPath: /home
+      readOnly: false
     resources: {}
   volumes:
   - name: dind-storage
