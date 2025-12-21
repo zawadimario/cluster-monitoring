@@ -3,10 +3,21 @@ kind: ConfigMap
 metadata:
   name: alpine-ping-dockerfile
 data:
-  Dockerfile: |
+  Dockerfile.ping: |
     FROM alpine:latest
     RUN apk update && apk add --no-cache iputils
     CMD ["ping", "-c", "10", "8.8.8.8"]
+  Dockerfile.python: |
+    FROM python:3.12-slim
+    CMD ["python", "-c", "print('Hello World')"]
+  Dockerfile.golang: |
+    FROM golang:1.23-alpine
+    CMD sh -c 'echo "package main; import \"fmt\"; func main(){fmt.Println(\"Hello World\")}" | go run -'
+
+# docker build -t ping --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.ping .
+# docker build -t hello-golang --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.golang .
+# docker build -t hello-python --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.python .
+# docker images --tree
 ---
 apiVersion: v1
 kind: Pod
