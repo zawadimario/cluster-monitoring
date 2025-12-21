@@ -7104,7 +7104,7 @@ spec:
             - name: IP
               value: "autodetect"
             - name: IP_AUTODETECTION_METHOD
-              value: "can-reach=*"
+              value: "can-reach=8.8.8.8"
             - name: FELIX_DEVICEROUTESOURCEADDRESS
               valueFrom:
                 fieldRef:

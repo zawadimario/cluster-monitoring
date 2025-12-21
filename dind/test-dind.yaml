@@ -1,4 +1,14 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alpine-ping-dockerfile
+data:
+  Dockerfile: |
+    FROM alpine:latest
+    RUN apk update && apk add --no-cache iputils
+    CMD ["ping", "-c", "10", "8.8.8.8"]
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: pod-case-dind
@@ -24,8 +34,12 @@ spec:
     volumeMounts:
     - name: dind-storage
       mountPath: /var/lib/docker
-    command: ["dockerd-entrypoint.sh"]
+    - name: dockerfile-volume
+      mountPath: /tmp
     resources: {}
   volumes:
   - name: dind-storage
     emptyDir: {}
+  - name: dockerfile-volume
+    configMap:
+      name: alpine-ping-dockerfile
