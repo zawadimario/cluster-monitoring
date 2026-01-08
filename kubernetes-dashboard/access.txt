@@ -1,0 +1,12 @@
+# UI
+kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard 8000:80
+
+# Create access Token
+kubectl -n kubernetes-dashboard create token kubernetes-dashboard
+
+# If token enabled Create long-lived token
+kubectl get secret admin-user -n kubernetes-dashboard -o jsonpath="{.data.token}" | base64 -d
+
+# Access dashboard at
+http://localhost:8000
+
