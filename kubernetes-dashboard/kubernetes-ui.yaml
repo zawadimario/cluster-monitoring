@@ -4,7 +4,7 @@ data:
 kind: Secret
 metadata:
   labels:
-    k8s-app: kubernetes-dashboardx
+    k8s-app: kubernetes-dashboard
   name: kubernetes-dashboard-csrf
   namespace: kubernetes-dashboard
 type: Opaque
@@ -34,14 +34,6 @@ metadata:
   name: kubernetes-dashboard
   labels:
     k8s-app: kubernetes-dashboard
-  namespace: kubernetes-dashboard
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  labels:
-    k8s-app: dashboard-metrics-scraper
-  name: metrics-scraper
   namespace: kubernetes-dashboard
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -143,85 +135,23 @@ subjects:
   name: kubernetes-dashboard
   namespace: kubernetes-dashboard
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: ConfigMap
+apiVersion: v1
 metadata:
-  labels:
-    k8s-app: dashboard-metrics-scraper
-  name: system:metrics-scraper
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - nodes/metrics
-  verbs:
-  - get
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - nodes
-  verbs:
-  - get
-  - list
-  - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    k8s-app: dashboard-metrics-scraper
-    rbac.authorization.k8s.io/aggregate-to-admin: "true"
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
-    rbac.authorization.k8s.io/aggregate-to-view: "true"
-  name: system:aggregated-metrics-reader
-rules:
-- apiGroups:
-  - metrics.k8s.io
-  resources:
-  - pods
-  - nodes
-  verbs:
-  - get
-  - list
-  - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    k8s-app: dashboard-metrics-scraper
-  name: metrics-scraper:system:auth-delegator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-- kind: ServiceAccount
-  name: metrics-scraper
+  name: kubernetes-dashboard-settings
   namespace: kubernetes-dashboard
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
   labels:
-    k8s-app: dashboard-metrics-scraper
-  name: system:metrics-scraper
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:metrics-scraper
-subjects:
-- kind: ServiceAccount
-  name: metrics-scraper
-  namespace: kubernetes-dashboard
+    k8s-app: kubernetes-dashboard
+data:
+  _global: >-
+    {"clusterName":"","itemsPerPage":50,"labelsLimit":3,"logsAutoRefreshTimeInterval":5,"resourceAutoRefreshTimeInterval":5,"disableAccessDeniedNotifications":false,"defaultNamespace":"default","namespaceFallbackList":["default"]}
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   labels:
     k8s-app: dashboard-metrics-scraper
-  name: kubernetes-dashboard-metrics-scraper
+  name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
 spec:
   replicas: 1
@@ -235,7 +165,7 @@ spec:
       annotations:
         seccomp.security.alpha.kubernetes.io/pod: "runtime/default"
     spec:
-      serviceAccountName: metrics-scraper
+      serviceAccountName: kubernetes-dashboard
       containers:
       - name: dashboard-metrics-scraper
         image: "docker.io/kubernetesui/dashboard-metrics-scraper:1.2.2"
@@ -278,7 +208,6 @@ metadata:
   name: kubernetes-dashboard
   namespace: kubernetes-dashboard
 spec:
-  progressDeadlineSeconds: 600
   replicas: 1
   selector:
     matchLabels:
@@ -365,31 +294,3 @@ spec:
     k8s-app: kubernetes-dashboard
   sessionAffinity: None
   type: NodePort
-# ---
-# apiVersion: v1
-# kind: ServiceAccount
-# metadata:
-#   name: admin-user
-#   namespace: kubernetes-dashboard
-# ---
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: admin-user
-#   namespace: kubernetes-dashboard
-#   annotations:
-#     kubernetes.io/service-account.name: "admin-user"   
-# type: kubernetes.io/service-account-token
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRoleBinding
-# metadata:
-#   name: admin-user
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: ClusterRole
-#   name: cluster-admin
-# subjects:
-# - kind: ServiceAccount
-#   name: admin-user
-#   namespace: kubernetes-dashboard
