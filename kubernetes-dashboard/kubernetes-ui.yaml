@@ -144,7 +144,7 @@ metadata:
     k8s-app: kubernetes-dashboard
 data:
   _global: >-
-    {"clusterName":"","itemsPerPage":50,"labelsLimit":3,"logsAutoRefreshTimeInterval":5,"resourceAutoRefreshTimeInterval":5,"disableAccessDeniedNotifications":false,"defaultNamespace":"default","namespaceFallbackList":["default"]}
+    {"clusterName":"","itemsPerPage":100,"labelsLimit":5,"logsAutoRefreshTimeInterval":5,"resourceAutoRefreshTimeInterval":5,"disableAccessDeniedNotifications":false,"defaultNamespace":"_all","namespaceFallbackList":["default"]}
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -168,7 +168,8 @@ spec:
       serviceAccountName: kubernetes-dashboard
       containers:
       - name: dashboard-metrics-scraper
-        image: "docker.io/kubernetesui/dashboard-metrics-scraper:1.2.2"
+        # image: "docker.io/kubernetesui/dashboard-metrics-scraper:1.2.2"
+        image: docker.io/kubernetesui/dashboard-metrics-scraper
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
