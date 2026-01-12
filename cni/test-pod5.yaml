@@ -8,3 +8,9 @@ spec:
     image: docker.io/centos/tools:latest
     command:
     - /sbin/init
+    # securityContext:
+    #   capabilities:
+    #     add:
+    #     - SYS_ADMIN
+    securityContext:
+      privileged: true
