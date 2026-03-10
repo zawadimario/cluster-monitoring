@@ -1,0 +1,81 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: "default"
+type: kubernetes.io/service-account-token
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: headlamp
+  template:
+    metadata:
+      labels:
+        k8s-app: headlamp
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: headlamp
+        image: ghcr.io/headlamp-k8s/headlamp:latest
+        args:
+        - "-in-cluster"
+        - "-plugins-dir=/headlamp/plugins"
+        env:
+        - name: HEADLAMP_CONFIG_TRACING_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_METRICS_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_SERVICE_NAME
+          value: "headlamp"
+        - name: HEADLAMP_CONFIG_SERVICE_VERSION
+          value: "latest"
+        ports:
+        - containerPort: 4466
+          name: http
+        - containerPort: 9090
+          name: metrics
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 4466
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 4466
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+      nodeSelector:
+        'kubernetes.io/os': linux
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 4466
+  selector:
+    k8s-app: headlamp
+
+###################################################################################################################
+# To access the UI
+# kubectl port-forward -n kube-system service/kubernetesui-headlamp 8080:80
+# To obtain the login token
+# kubectl -n kube-system get secret kubernetesui-headlamp -o jsonpath='{.data.token}' | base64 --decode; echo
+###################################################################################################################
