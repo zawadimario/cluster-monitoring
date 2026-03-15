@@ -25,7 +25,7 @@ spec:
       serviceAccountName: default
       containers:
       - name: headlamp
-        image: ghcr.io/headlamp-k8s/headlamp:latest
+        image: ghcr.io/headlamp-k8s/headlamp
         args:
         - "-in-cluster"
         - "-plugins-dir=/headlamp/plugins"
@@ -74,8 +74,6 @@ spec:
     k8s-app: headlamp
 
 ###################################################################################################################
-# To access the UI
-# kubectl port-forward -n kube-system service/kubernetesui-headlamp 8080:80
 # To obtain the login token
 # kubectl -n kube-system get secret kubernetesui-headlamp -o jsonpath='{.data.token}' | base64 --decode; echo
 ###################################################################################################################
