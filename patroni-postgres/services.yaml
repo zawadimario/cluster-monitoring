@@ -4,7 +4,7 @@ metadata:
   name: patronitectel-config
   namespace: tectelio
   labels:
-    application: patroni
+    application: tectel
     cluster-name: patronitectel
 spec:
   clusterIP: None
@@ -14,8 +14,9 @@ kind: Endpoints
 metadata:
   name: &cluster_name patronitectel
   labels:
-    application: patroni
+    application: tectel
     cluster-name: *cluster_name
+    role: master
 subsets: []
 ---
 apiVersion: v1
@@ -24,8 +25,9 @@ metadata:
   name: &cluster_name patronitectel
   namespace: tectelio
   labels:
-    application: patroni
+    application: tectel
     cluster-name: *cluster_name
+    role: master
 spec:
   type: ClusterIP
   ports:
@@ -39,15 +41,31 @@ metadata:
   name: patronitectel-repl
   namespace: tectelio
   labels:
-    application: patroni
+    application: tectel
     cluster-name:  &cluster_name patronitectel
     role: replica
 spec:
   type: ClusterIP
   selector:
-    application: patroni
+    application: tectel
     cluster-name: *cluster_name
     role: replica
   ports:
-  - port: 5432
+  - name: http
+    port: 5432
     targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: patronitectel-metrics
+  namespace: tectelio
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 8008
+    targetPort: 8008
+  selector:
+    application: tectel
+    cluster-name: patronitectel
