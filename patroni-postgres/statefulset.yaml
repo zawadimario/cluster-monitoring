@@ -4,7 +4,7 @@ metadata:
   name: &cluster_name patronitectel
   namespace: tectelio
   labels:
-    application: patroni
+    application: tectel
     cluster-name: *cluster_name
 spec:
   persistentVolumeClaimRetentionPolicy:
@@ -14,14 +14,21 @@ spec:
   serviceName: *cluster_name
   selector:
     matchLabels:
-      application: patroni
+      application: tectel
       cluster-name: *cluster_name
   template:
     metadata:
       labels:
-        application: patroni
+        application: tectel
         cluster-name: *cluster_name
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
       serviceAccountName: patronitectel
       containers:
         - name: *cluster_name
@@ -31,6 +38,8 @@ spec:
             - containerPort: 8008
               protocol: TCP
             - containerPort: 5432
+              protocol: TCP
+            - containerPort: 8080
               protocol: TCP
           volumeMounts:
             - mountPath: /home/postgres/pgdata
@@ -56,9 +65,19 @@ spec:
             - name: PATRONI_KUBERNETES_USE_ENDPOINTS
               value: "true"
             - name: PATRONI_KUBERNETES_LABELS
-              value: "{application: patroni, cluster-name: patronitectel}"
+              value: "{application: tectel, cluster-name: patronitectel}"
             - name: PATRONI_SUPERUSER_USERNAME
               value: postgres
+            - name: PATRONI_KUBERNETES_ROLE_LABEL
+              value: role
+            - name: PATRONI_KUBERNETES_LEADER_LABEL_VALUE
+              value: master
+            - name: PATRONI_KUBERNETES_FOLLOWER_LABEL_VALUE
+              value: replica
+            - name: PATRONI_KUBERNETES_STANDBY_LEADER_LABEL_VALUE
+              value: active_standby
+            # - name: PATRONI_CONFIGURATION
+            #   value: '{"postgresql":{"parameters":{"shared_buffers":"1024MB"}},"bootstrap":{"initdb":[{"auth-host":"md5"},{"auth-local":"trust"},"data-checksums",{"encoding":"UTF8"},{"locale":"en_US.UTF-8"}],"users":{"zalandos":{"password":"","options":["CREATEDB","NOLOGIN"]}},"dcs":{"ttl":30,"loop_wait":10,"retry_timeout":10,"maximum_lag_on_failover":1048576,"synchronous_mode":true,"synchronous_mode_strict":true,"postgresql":{"parameters":{"huge_pages":"off","max_connections":"400","ssl_ciphers":"HIGH:MEDIUM:-3DES:!aNULL","synchronous_standby_names":"*","tcp_keepalives_count":"4","tcp_keepalives_idle":"100","tcp_keepalives_interval":"5","wal_keep_segments":"100","wal_keep_size":"2GB"}}}}}'
             - name: PATRONI_SUPERUSER_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -97,6 +116,26 @@ spec:
               value: "0644"
             - name: TZ
               value: "Asia/Tokyo"
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /readiness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /liveness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
       terminationGracePeriodSeconds: 0
   updateStrategy:
     type: OnDelete
@@ -105,8 +144,8 @@ spec:
     kind: PersistentVolumeClaim
     metadata:
       labels:
-        application: tectel-patroni
-        cluster-name: tectelpatroni
+        application: tectel
+        cluster-name: patronitectel
       name: pgdata
     spec:
       accessModes:

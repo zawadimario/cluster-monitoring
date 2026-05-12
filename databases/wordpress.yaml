@@ -1,36 +1,19 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: mysql-pv-claim
+  name: mysql-pv-claim-wordpress
 spec:
   accessModes:
   - ReadWriteMany
   resources:
     requests:
-      storage: 2Gi
----
-kind: Secret
-apiVersion: v1
-metadata:
-  name: mysql-secret
-type: Opaque
-data:
-  .username: cm9vdA==
-  .password: cm9vdA==
-  .dbuser: dGVjdGVs
-  .dbuserpass: dGVjdGVs
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: mysql
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: mysqlinit-configs
+  name: mysqlinit-configs-wordpress
 data:
-  host: mysql.default.svc.cluster.local
   custom.cnf: |
     [mysqld]
     character-set-server=utf8mb4
@@ -40,15 +23,12 @@ data:
     collation-server=utf8mb4_unicode_ci
 
   createdb.sql: |
-    create user if not exists 'exporter'@'%' identified by 'exporter' with max_user_connections 3;
-    grant process, replication client, select on *.* to 'exporter'@'%';
-    flush privileges;
-    create database if not exists tectel;
+    create database if not exists wordpress;
     create database if not exists recordings;
-    create user if not exists 'tectel'@'%' identified by 'tectel';
-    grant all privileges on tectel.* to 'tectel'@'%';
-    grant all privileges on recordings.* to 'tectel'@'%';
-    create table tectel.actor
+    create user if not exists 'wordpress'@'%' identified by 'wordpress';
+    grant all privileges on wordpress.* to 'wordpress'@'%';
+    grant all privileges on recordings.* to 'wordpress'@'%';
+    create table wordpress.actor
     (
         ID int auto_increment,
         FirstName  varchar(20) not null,
@@ -77,28 +57,40 @@ data:
         ('Giant Steps', 'John Coltrane', 63.99),
         ('Jeru', 'Gerry Mulligan', 17.99),
         ('Sarah Vaughan', 'Sarah Vaughan', 34.98);
-
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql-wordpress
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  .password: cm9vdA==
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: mysql
+  name: mysql-wordpress
   labels:
-    app: mysql
+    app: mysql-wordpress
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mysql
-  serviceName: mysql
+      app: mysql-wordpress
+  serviceName: mysql-wordpress
   template:
     metadata:
       labels:
-        app: mysql
+        app: mysql-wordpress
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
-      serviceAccountName: mysql
+      serviceAccountName: mysql-wordpress
       containers:
       - image: mysql:9.4
         name: mysql
@@ -136,10 +128,10 @@ spec:
       volumes:
       - name: mysql-persistent-storage
         persistentVolumeClaim:
-          claimName: mysql-pv-claim
+          claimName: mysql-pv-claim-wordpress
       - name: mysql-server
         configMap:
-          name: mysqlinit-configs
+          name: mysqlinit-configs-wordpress
           items:
           - key: custom.cnf
             path: custom.cnf
@@ -149,90 +141,78 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql
+  name: wordpressmsql-mysql
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
   - name: mysql
     port: 3306
     targetPort: 3306
   selector:
-    app: mysql
+    app: mysql-wordpress
 ---
 apiVersion: v1
-kind: ServiceAccount
+kind: PersistentVolumeClaim
 metadata:
-  name: mysql-exporter
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mysql-exporter
-data:
-  exporter-custom.cnf: |
-    [client]
-    user=exporter
-    password=exporter
+  name: wordpress-pv-claim
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: mysql-exporter
+  name: wordpress
   labels:
-    app: mysql-exporter
+    app: wordpress
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mysql-exporter
-  serviceName: mysql-exporter
+      app: wordpress
   template:
     metadata:
       labels:
-        app: mysql-exporter
+        app: wordpress
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
-      serviceAccountName: mysql-exporter
       containers:
-      - name: mysqld-exporter
-        image: prom/mysqld-exporter
+      - name: wordpress
+        image: wordpress
         imagePullPolicy: IfNotPresent
-        args:
-        - --config.my-cnf=/etc/mysql/conf.d/custom.cnf
-        - --mysqld.address=mysql.default.svc.cluster.local:3306
-        - --mysqld.username=exporter
-        - --tls.insecure-skip-verify
-        - --log.level=debug
         ports:
-        - containerPort: 9104
-          name: metrics
+        - containerPort: 80
         env:
-        - name: MYSQLD_EXPORTER_PASSWORD
-          value: "exporter"
-        - name: TZ
-          value: "Asia/Tokyo"
+        - name: WORDPRESS_DB_USER
+          value: wordpress
+        - name: WORDPRESS_DB_PASSWORD
+          value: wordpress
+        - name: WORDPRESS_DB_NAME
+          value: wordpress
+        - name: WORDPRESS_DB_HOST
+          value: wordpressmsql-mysql.default.svc.cluster.local:3306
         volumeMounts:
-        - mountPath: /etc/mysql/conf.d/custom.cnf
-          name: mysql-exporter
-          subPath: custom.cnf
+        - name: wordpress-storage
+          mountPath: /var/www/html
+        resources: {}
       volumes:
-      - name: mysql-exporter
-        configMap:
-          name: mysql-exporter
-          items:
-          - key: exporter-custom.cnf
-            path: custom.cnf
+      - name: wordpress-storage
+        persistentVolumeClaim:
+          claimName: wordpress-pv-claim
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql-exporter
+  name: wordpress
 spec:
   type: NodePort
-  ports:
-  - name: metrics
-    port: 9104
-    targetPort: 9104
   selector:
-    app: mysql-exporter
+    app: wordpress
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080

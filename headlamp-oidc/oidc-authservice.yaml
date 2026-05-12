@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authservice-pvc
+  namespace: auth
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oidc-authservice-parameters
+  namespace: auth
+data:
+  OIDC_PROVIDER: http://dex.auth.svc.cluster.local:5556/dex
+  OIDC_AUTH_URL: /dex/auth
+  OIDC_SCOPES: openid email groups profile offline_access
+  AUTHSERVICE_URL_PREFIX: /authservice/
+  REDIRECT_URL: http://127.0.0.1:8000/oidc-callback
+  SKIP_AUTH_URLS: /dex
+  AFTER_LOGOUT_URL: /
+  USERID_HEADER: kubeflow-userid
+  # USERID_HEADER: headlamp-userid
+  USERID_PREFIX: ""
+  USERID_CLAIM: email
+  PORT: '"8080"'
+  STORE_PATH: /var/lib/authservice/data.db
+  SESSION_MAX_AGE: '300'
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: oidc-authservice
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authservice
+  serviceName: authservice
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: authservice
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      serviceAccountName: authservice
+      containers:
+      - name: authservice
+        image: williamyang1/docker.io_kubeflowmanifestswg_oidc-authservice:e236439
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http-api
+          containerPort: 8080
+        env:
+        - name: CLIENT_ID
+          value: "headlamp-oidc-authservice"
+        - name: CLIENT_SECRET
+          value: "aGVhZGxhbXAtc2VjcmV0"
+        envFrom:
+        - configMapRef:
+            name: oidc-authservice-parameters
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/authservice
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8081
+            scheme: HTTP
+      securityContext:
+        fsGroup: 111
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: authservice-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authservice
+  namespace: auth
+spec:
+  type: ClusterIP
+  selector:
+    app: authservice
+  ports:
+    - port: 8080
+      name: http-authservice
+      targetPort: http-api
+  publishNotReadyAddresses: true

@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: observability
+data:
+  grafana.ini: |-
+    [auth.ldap]
+    enabled = true
+    config_file = /etc/grafana/ldap.toml
+    allow_sign_up = true
+    skip_org_role_sync = true
+    allow_assign_grafana_admin = true
+    sync_ttl = 60
+    allow_assign_grafana_admin = true
+    login_attribute = "mail"
+    group_search_filter = "(&(objectClass=group)(member=%d))"
+    group_search_base_dns = ["ou=users,dc=techtel,dc=com"]
+    group_search_user_attribute = "(sn=%s)"
+    
+    [log]
+    filters = ldap:debug
+
+    [security]
+    admin_user = admin.test@techtel.com
+    admin_password = admin123
+    admin_email = lernmat.mario@gmail.com
+
+    [paths]
+    plugins = /var/lib/grafana/plugins
+
+    # uncomment below lines if you enabled initContainer
+    # [plugins]
+    # allow_loading_unsigned_plugins = grafana-lokiexplore-app,grafana-pyroscope-app,grafana-exploretraces-app,grafana-metricsdrilldown-app
+
+    [analytics]
+    check_for_plugin_updates = false
+  
+  ldap.toml: |-
+    [[servers]]
+    host = "openldap.auth"
+    port = 389
+    use_ssl = false
+    start_tls = false
+    ssl_skip_verify = true
+    bind_dn = "cn=adminuser,dc=techtel,dc=com"
+    bind_password = "admin123"
+    search_filter = "(sn=%s)"
+    search_base_dns = ["dc=techtel,dc=com"]
+  
+    [servers.attributes]
+    member_of = "memberOf"
+    email =  "email"
+    username  = "sn"
+    emailAttr = "mail"
+    nameAttr = "sn"
+  
+    [[servers.group_mappings]]
+    group_dn = "ou=users,dc=techtel,dc=com"
+    org_role = "Editor"
+    grafana_admin = false
+
+    [[servers.group_mappings]]
+    group_dn = "cn=admin.test,dc=techtel,dc=com"
+    org_role = "Admin"
+    grafana_admin = true
+  
+    [[servers.group_mappings]]
+    group_dn = "*"
+    org_role = "Viewer"
+
+  prometheus.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus.observability:9090
+      isDefault: true
+      editable: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: observability
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: observability
+  labels:
+    tier: grafana
+  name: grafana
+spec:
+  selector:
+    matchLabels:
+      tier: grafana
+  template:
+    metadata:
+      labels:
+        tier: grafana
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      securityContext:
+        fsGroup: 472
+        supplementalGroups:
+          - 0
+        # Enable the following to install grafana plugins at startup if needed
+      # initContainers:
+      # - name: install-grafana-plugins
+      #   image: grafana/grafana-oss:main
+      #   securityContext:
+      #     runAsUser: 0
+      #   command:
+      #     - sh
+      #     - -c
+      #     - |
+      #       set -eux
+      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/release/main/any/grafana-lokiexplore-app-main.zip plugins install grafana-lokiexplore-app
+      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-pyroscope-app/release/1.10.1/grafana-pyroscope-app-1.10.1.zip plugins install grafana-pyroscope-app
+      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-exploretraces-app/release/1.2.0/grafana-exploretraces-app-1.2.0.zip plugins install grafana-exploretraces-app
+      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-metricsdrilldown-app/release/1.0.18/grafana-metricsdrilldown-app-1.0.18.zip plugins install grafana-metricsdrilldown-app
+      #   volumeMounts:
+      #   - name: grafana-plugins
+      #     mountPath: /var/lib/grafana/plugins
+      containers:
+      - image: grafana/grafana-oss:main
+        imagePullPolicy: IfNotPresent
+        name: grafana
+        ports:
+        - containerPort: 3000
+          name: http-grafana
+          protocol: TCP
+        env:
+        - name: GF_METRICS_ENABLED
+          value: "true"
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /robots.txt
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/lib/grafana
+          name: grafana-pv
+        - name: grafana-config
+          mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - mountPath: /etc/grafana/grafana.ini
+          name: grafana-config
+          subPath: grafana.ini
+          readOnly: true
+        - mountPath: /etc/grafana/ldap.toml
+          name: grafana-config
+          subPath: ldap.toml
+          readOnly: true
+        - mountPath: /var/lib/grafana/plugins
+          name: grafana-plugins
+      volumes:
+      - name: grafana-pv
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+      - name: grafana-config
+        configMap:
+          name: grafana-config
+      - name: grafana-plugins
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: http-grafana
+  selector:
+    tier: grafana
+  sessionAffinity: None
+  type: NodePort

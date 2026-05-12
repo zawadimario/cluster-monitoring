@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: headlamp
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headlamp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: headlamp
+  namespace: kube-system
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubernetesui-headlamp-second
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: headlamp-second
+  template:
+    metadata:
+      labels:
+        k8s-app: headlamp-second
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      serviceAccountName: headlamp
+      containers:
+      - name: headlamp
+        image: ghcr.io/headlamp-k8s/headlamp
+        imagePullPolicy: Always
+        args:
+        - -in-cluster
+        - -plugins-dir=/headlamp/plugins
+        - -log-level=info
+        - -insecure-ssl
+        - -metrics-enabled=true
+        - -stdout-trace-enabled
+        - -oidc-skip-tls-verify
+        - -oidc-client-id=headlamp-oidc-authservice
+        - -oidc-client-secret=aGVhZGxhbXAtc2VjcmV0
+        - -oidc-idp-issuer-url=http://dex.auth.svc.cluster.local:5556/dex
+        - -oidc-callback-url=http://127.0.0.1:8000/oidc-callback
+        - -oidc-validator-idp-issuer-url=http://dex.auth.svc.cluster.local:5556/dex
+        - -oidc-scopes=profile,email,openid,offline_access
+        env:
+        - name: HEADLAMP_CONFIG_TRACING_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_METRICS_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_SERVICE_NAME
+          value: "kubernetesui-headlamp-second"
+        - name: HEADLAMP_CONFIG_SERVICE_VERSION
+          value: "latest"
+        ports:
+        - containerPort: 4466
+          name: http
+        - containerPort: 9090
+          name: metrics
+      nodeSelector:
+        'kubernetes.io/os': linux
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubernetesui-headlamp-second
+  namespace: kube-system
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 4466
+    nodePort: 30472
+  selector:
+    k8s-app: headlamp-second

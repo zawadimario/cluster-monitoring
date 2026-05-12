@@ -2,13 +2,13 @@
                 For IPv6
 =============================================================
 redis-cli -h :: -p 6379
-redis-cli -u redis://tectelUser:tectelUser123@[::]637
+redis-cli -u redis://tectelUser:tectelUser123@[::]6379
  
 
  ============================================================
                 For IPv6
  ============================================================
-redis-cli -u redis://tectelUser:tectelUser123@localhost:637
+redis-cli -u redis://tectelUser:tectelUser123@localhost:6379
 
 redis-cli -h localhost -p 6379
 

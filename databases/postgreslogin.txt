@@ -1,3 +1,4 @@
 psql -h svc-postgres-db -U tectelUser -p 5432 tectel
+rep-pass
 
 password tectelUser

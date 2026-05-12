@@ -22,7 +22,7 @@ data:
         scrape_interval: 30s
         metrics_path: /metrics
         static_configs:
-        - targets: ["svc-redis-server.redis:9121"]
+        - targets: ["svc-redis-exporter.redis:9121"]
 
       - job_name: 'calico-felix'
         scrape_interval: 30s
@@ -41,7 +41,7 @@ data:
         - source_labels: [__param_target]
           target_label: instance
         - target_label: __address__
-          replacement: mysql.default:9104
+          replacement: mysql-exporter.default:9104
 
       - job_name: 'postgres-exporter'
         scrape_interval: 15s
@@ -66,37 +66,28 @@ data:
           labels:
             name: 'cadvisor'
 
-      - job_name: 'minio-cluster'
+      - job_name: 'minio-aistor'
         scrape_interval: 30s
-        metrics_path: /minio/v2/metrics/cluster
+        metrics_path: /minio/metrics/v3
         static_configs:
         - targets: ['minio-service.default:9000']
           labels:
             app: minio
 
-      - job_name: 'minio-resource'
+      - job_name: 'node-exporter'
         scrape_interval: 30s
-        metrics_path: /minio/v2/metrics/resource
-        static_configs:
-        - targets: ['minio-service.default:9000']
-          labels:
-            app: minio
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_endpoints_name]
+          regex: 'node-exporter'
+          action: keep
 
-      - job_name: 'minio-node'
-        scrape_interval: 30s
-        metrics_path: /minio/v2/metrics/node
+      - job_name: 'kube-state-metrics'
         static_configs:
-        - targets: ['minio-service.default:9000']
+        - targets: ['kube-state-metrics.kube-system:8080']
           labels:
-            app: minio
-
-      - job_name: 'minio-bucket'
-        scrape_interval: 30s
-        metrics_path: /minio/v2/metrics/bucket
-        static_configs:
-        - targets: ['minio-service.default:9000']
-          labels:
-            app: minio
+            app.kubernetes.io/name: kube-state-metrics
 
       - job_name: 'kubernetes-nodes'
         scrape_interval: 15s
@@ -170,6 +161,9 @@ data:
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
           regex: tectelio;.*
           action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
      
       - job_name: 'kube-proxy'
         scrape_interval: 30s
@@ -231,6 +225,9 @@ data:
         - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
           regex: tectelio;.*
           action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
 
       - job_name: "kubernetes-service-endpoints"
         scrape_interval: 30s
@@ -268,6 +265,9 @@ data:
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
           regex: tectelio;.*
           action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
 
       - job_name: "kubelet"
         scheme: https
@@ -300,6 +300,53 @@ data:
           annotations:
             summary: "Service down on a weekday"
             description: "The 'up' metric is 0, meaning a target is down, but only triggers on weekdays (Mon-Fri)."
+    - name: kube-state-metrics
+      rules:
+        - alert: KubeStateMetricsListErrors
+          annotations:
+            description: kube-state-metrics is experiencing errors at an elevated rate in list operations. This is likely causing it to not be able to expose metrics about Kubernetes objects correctly or at all.
+            summary: kube-state-metrics is experiencing errors in list operations.
+          expr: |
+            (sum(rate(kube_state_metrics_list_total{job="kube-state-metrics",result="error"}[5m])) by (cluster)
+              /
+            sum(rate(kube_state_metrics_list_total{job="kube-state-metrics"}[5m])) by (cluster))
+            > 0.01
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsWatchErrors
+          annotations:
+            description: kube-state-metrics is experiencing errors at an elevated rate in watch operations. This is likely causing it to not be able to expose metrics about Kubernetes objects correctly or at all.
+            summary: kube-state-metrics is experiencing errors in watch operations.
+          expr: |
+            (sum(rate(kube_state_metrics_watch_total{job="kube-state-metrics",result="error"}[5m])) by (cluster)
+              /
+            sum(rate(kube_state_metrics_watch_total{job="kube-state-metrics"}[5m])) by (cluster))
+            > 0.01
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsShardingMismatch
+          annotations:
+            description: kube-state-metrics pods are running with different --total-shards configuration, some Kubernetes objects may be exposed multiple times or not exposed at all.
+            summary: kube-state-metrics sharding is misconfigured.
+          expr: |
+            stdvar (kube_state_metrics_total_shards{job="kube-state-metrics"}) by (cluster) != 0
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsShardsMissing
+          annotations:
+            description: kube-state-metrics shards are missing, some Kubernetes objects are not being exposed.
+            summary: kube-state-metrics shards are missing.
+          expr: |
+            2^max(kube_state_metrics_total_shards{job="kube-state-metrics"}) by (cluster) - 1
+              -
+            sum( 2 ^ max by (cluster, shard_ordinal) (kube_state_metrics_shard_ordinal{job="kube-state-metrics"}) ) by (cluster)
+            != 0
+          for: 15m
+          labels:
+            severity: critical
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -359,3 +406,5 @@ spec:
     protocol: TCP
     targetPort: 9090
     nodePort: 30090
+  externalTrafficPolicy: Local
+  sessionAffinity: ClientIP

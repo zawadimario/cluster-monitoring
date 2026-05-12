@@ -1,0 +1,3 @@
+FROM alpine:latest
+RUN apk update && apk add --no-cache iputils bash
+CMD ["ping", "-c", "10", "localhost"]

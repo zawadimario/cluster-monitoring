@@ -68,15 +68,15 @@ spec:
         app: minio
       annotations:
         sidecar.istio.io/inject: "false"
-        prometheus.io/path: "/minio/v2/metrics/"
+        prometheus.io/path: "/minio/metrics/v3/"
         prometheus.io/port: "9000"
         prometheus.io/scrape: "true"
     spec:
       serviceAccountName: default
       containers:
       - name: minio
-        image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
-        # image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+        image: quay.io/minio/aistor/minio
+        imagePullPolicy: IfNotPresent
         args:
         - server
         - /data{1...4}
@@ -91,9 +91,10 @@ spec:
               - |
                 sleep 3s
                 mc alias set minioserver http://localhost:9000 minio.admin@techtel.com minioadmin --api "s3v4" --path "auto"
-                mc idp ldap add minioserver/ server_addr="openldap.auth.svc.cluster.local:389" enable="on" server_insecure="on" user_dn_search_base_dn="dc=techtel,dc=com" user_dn_search_filter="(sn=%s)" group_search_base_dn="ou=users,dc=techtel,dc=com" group_search_filter="(&(objectClass=group)(member=%d))" lookup_bind_dn="cn=adminuser,dc=techtel,dc=com" lookup_bind_password="admin123"
+                mc admin config set minioserver subnet license="your-licence-key"
+                mc idp ldap add minioserver/ server_addr="openldap.auth.svc.cluster.local:389" enable="on" server_insecure="on" user_dn_search_base_dn="dc=techtel,dc=com" user_dn_search_filter="(sn=%s)" group_search_base_dn="ou=users,dc=techtel,dc=com" group_search_filter="(&(objectClass=group)(member=%d))" lookup_bind_dn="cn=adminuser,dc=techtel,dc=com" lookup_bind_password="admin123" comment="OpenLDAP Test Server"
                 mc admin service restart minioserver/
-                sleep 6s
+                sleep 3s
                 mc idp ldap info minioserver/
                 mc idp ldap policy attach minioserver/ consoleAdmin --user='cn=minio.admin,ou=users,dc=techtel,dc=com'
                 mc idp ldap policy attach minioserver/ consoleAdmin --user='cn=zawadi.omari,ou=users,dc=techtel,dc=com'
@@ -119,6 +120,8 @@ spec:
           value: "public"
         - name: MINIO_PROMETHEUS_URL
           value: "http://prometheus.observability:9090"
+        - name: MINIO_BROWSER_SESSION_DURATION
+          value: "10m"
         ports:
         - containerPort: 9000
         - containerPort: 9090
@@ -151,20 +154,21 @@ spec:
             claimName: minio-pvc-4
       restartPolicy: Always
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: minio-service
-spec:
-  type: NodePort
-  ports:
-  - name: http
-    port: 9000
-    protocol: TCP
-    targetPort: 9000
-  - name: console-port
-    port: 9090
-    protocol: TCP
-    targetPort: 9090
-  selector:
-    app: minio
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: minio-service
+# spec:
+#   type: NodePort
+#   ports:
+#   - name: http
+#     port: 9000
+#     protocol: TCP
+#     targetPort: 9000
+#   - name: console-port
+#     port: 9090
+#     protocol: TCP
+#     targetPort: 9090
+#     nodePort: 32322
+#   selector:
+#     app: minio
