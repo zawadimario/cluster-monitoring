@@ -40,8 +40,14 @@ minikube start --cpus=8 --memory=11.5g --disk-size=56g --driver=docker --contain
 sleep 3
 minikube ssh "sudo curl -L https://github.com/projectcalico/calico/releases/download/v3.32.0/calicoctl-linux-arm64 -o /usr/bin/calicoctl && sudo chmod +x /usr/bin/calicoctl"
 
-sleep 30
-kubectl apply -f ~/cluster-monitoring/cnis/calico-install.yaml
-sleep 60
-kubectl apply -f ~/cluster-monitoring/cnis/multus-thin.yaml
+sleep 3
+minikube ssh "sudo apt-get update && sudo apt-get install -y pciutils"
+minikube ssh "lspci -nnk | grep -i net -A 2"
+
 # minikube node add --worker=true && minikube node add --worker=true
+# minikube ssh --node minikube-m02 "sudo apt-get update && sudo apt-get install -y pciutils"
+# minikube ssh --node minikube-m03 "sudo apt-get update && sudo apt-get install -y pciutils"
+# minikube ssh --node minikube-m02 "lspci -nnk | grep -i net -A 2"
+# minikube ssh --node minikube-m02 "lspci"
+# minikube ssh --node minikube-m03 "lspci -nnk | grep -i net -A 2"
+# minikube ssh --node minikube-m03 "lspci"
