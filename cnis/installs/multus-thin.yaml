@@ -137,7 +137,7 @@ data:
               },
               "log_level": "info",
               "log_file_path": "/var/log/calico/cni/cni.log",
-              "mtu": 1500,
+              "mtu": 1480,
               "nodename": "__KUBERNETES_NODE_NAME__",
               "policy": {
                 "type": "k8s"
@@ -243,7 +243,6 @@ spec:
           - /bin/bash
           - -c
           - rm -f /host/opt/cni/bin/multus; cp /usr/src/multus-cni/bin/multus /host/opt/cni/bin/multus
-          - rm -rf /host/etc/cni/net.d/1-k8s.conflist
           resources:
             requests:
               cpu: "10m"

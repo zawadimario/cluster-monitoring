@@ -38,7 +38,7 @@ data:
   typha_service_name: "none"
   calico_backend: "bird"
   calico_iptables_mode: Insert
-  veth_mtu: "1500"
+  veth_mtu: "1480"
   cni_network_config: |-
     {
       "name": "calico",
@@ -48,6 +48,8 @@ data:
           "type": "calico",
           "log_level": "info",
           "log_file_path": "/var/log/calico/cni/cni.log",
+          "log_file_max_age": "30",
+          "log_file_max_count": "7",
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
           "mtu": __CNI_MTU__,
@@ -6985,12 +6987,7 @@ spec:
         kubernetes.io/os: linux
       hostNetwork: true
       tolerations:
-        - effect: NoSchedule
-          operator: Exists
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - effect: NoExecute
-          operator: Exists
+      - operator: "Exists"
       serviceAccountName: calico-node
       securityContext:
         seccompProfile:
@@ -7103,8 +7100,16 @@ spec:
               value: "k8s,bgp"
             - name: IP
               value: "autodetect"
+            - name: CALICO_IPV4POOL_CIDR
+              value: "192.168.0.0/16"
+            - name: CALICO_IPV6POOL_CIDR
+              value: "none"
             - name: IP_AUTODETECTION_METHOD
               value: "can-reach=8.8.8.8"
+            - name: CALICO_NO_DEFAULT_POOLS
+              value: "true"
+            - name: CALICO_ROUTER_ID
+              value: "hash"
             - name: FELIX_DEVICEROUTESOURCEADDRESS
               valueFrom:
                 fieldRef:
@@ -7134,12 +7139,12 @@ spec:
               value: "Never"
             - name: CALICO_IPV4POOL_NAT_OUTGOING
               value: "true"
+            - name: CALICO_IPV6POOL_NAT_OUTGOING
+              value: "true"
             - name: CALICO_IPV4POOL_VXLAN
               value: "Never"
             - name: CALICO_IPV6POOL_VXLAN
               value: "Never"
-            - name: CALICO_ROUTER_ID
-              value: hash
             - name: FELIX_IPTABLESBACKEND
               value: Auto
             - name: FELIX_IPINIPMTU
@@ -7162,7 +7167,7 @@ spec:
             - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
               value: "ACCEPT"
             - name: FELIX_IPV6SUPPORT
-              value: "false"
+              value: "true"
             - name: FELIX_HEALTHENABLED
               value: "true"
           securityContext:
@@ -7284,14 +7289,9 @@ spec:
         k8s-app: calico-kube-controllers
     spec:
       nodeSelector:
-        kubernetes.io/os: linux
+        node-role.kubernetes.io/control-plane: ""
       tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          effect: NoSchedule
+      - operator: "Exists"
       serviceAccountName: calico-kube-controllers
       securityContext:
         seccompProfile:

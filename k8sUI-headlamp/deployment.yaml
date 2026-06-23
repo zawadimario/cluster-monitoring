@@ -3,9 +3,9 @@ kind: Secret
 metadata:
   name: kubernetesui-headlamp
   namespace: kube-system
-#   annotations:
-#     kubernetes.io/service-account.name: "headlamp"
-# type: kubernetes.io/service-account-token
+  annotations:
+    kubernetes.io/service-account.name: "headlamp"
+type: kubernetes.io/service-account-token
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -25,6 +25,9 @@ subjects:
 - kind: ServiceAccount
   name: headlamp
   namespace: kube-system
+- kind: Group
+  name: system:authenticated
+  apiGroup: rbac.authorization.k8s.io
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -72,18 +75,18 @@ spec:
           name: metrics
         resources: {}   
 ---
-kind: Service
-apiVersion: v1
-metadata:
-  name: kubernetesui-headlamp
-  namespace: kube-system
-spec:
-  type: NodePort
-  ports:
-  - port: 80
-    targetPort: 4466
-  selector:
-    k8s-app: headlamp
+# kind: Service
+# apiVersion: v1
+# metadata:
+#   name: kubernetesui-headlamp
+#   namespace: kube-system
+# spec:
+#   type: NodePort
+#   ports:
+#   - port: 80
+#     targetPort: 4466
+#   selector:
+#     k8s-app: headlamp
 
 ###################################################################################################################
 # To generate a secret

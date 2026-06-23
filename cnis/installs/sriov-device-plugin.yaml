@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sriovdp-config
+  namespace: kube-system
+data:
+  config.json: |
+    {
+        "resourceList": [
+            {
+                "resourceName": "minikube_mock_net",
+                "resourcePrefix": "intel.com",
+                "deviceType": "netDevice",
+                "selectors": {
+                    "vendors": ["1af4"],
+                    "devices": ["1041"],
+                    "drivers": ["virtio-pci"]
+                }
+            }
+        ]
+    }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sriov-device-plugin
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube-sriov-device-plugin-arm64
+  namespace: kube-system
+  labels:
+    tier: node
+    app: sriovdp
+spec:
+  selector:
+    matchLabels:
+      name: sriov-device-plugin
+  template:
+    metadata:
+      labels:
+        name: sriov-device-plugin
+        tier: node
+        app: sriovdp
+    spec:
+      hostNetwork: true
+      serviceAccountName: sriov-device-plugin
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: kube-sriovdp
+        image: ghcr.io/k8snetworkplumbingwg/sriov-network-device-plugin:latest
+        imagePullPolicy: IfNotPresent
+        args:
+        - --log-dir=sriovdp
+        - --log-level=10
+        - --config-file=/etc/pcidp/config.json
+        securityContext:
+          privileged: true
+        resources: {}
+        volumeMounts:
+        - name: devicesock
+          mountPath: /var/lib/kubelet/
+        - name: plugins-registry
+          mountPath: /var/lib/kubelet/plugins_registry
+        - name: log
+          mountPath: /var/log
+        - name: config-volume
+          mountPath: /etc/pcidp
+        - name: device-info
+          mountPath: /var/run/k8s.cni.cncf.io/devinfo/dp
+      volumes:
+      - name: devicesock
+        hostPath:
+          path: /var/lib/kubelet/device-plugins
+      - name: plugins-registry
+        hostPath:
+          path: /var/lib/kubelet/plugins_registry
+      - name: log
+        hostPath:
+          path: /var/log
+      - name: device-info
+        hostPath:
+          path: /var/run/k8s.cni.cncf.io/devinfo/dp
+          type: DirectoryOrCreate
+      - name: config-volume
+        configMap:
+          defaultMode: 420
+          name: sriovdp-config
+          items:
+          - key: config.json
+            path: config.json

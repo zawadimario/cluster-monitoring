@@ -91,7 +91,7 @@ spec:
               - |
                 sleep 3s
                 mc alias set minioserver http://localhost:9000 minio.admin@techtel.com minioadmin --api "s3v4" --path "auto"
-                mc admin config set minioserver subnet license="your-licence-key"
+                mc admin config set minioserver subnet license="your-key"
                 mc idp ldap add minioserver/ server_addr="openldap.auth.svc.cluster.local:389" enable="on" server_insecure="on" user_dn_search_base_dn="dc=techtel,dc=com" user_dn_search_filter="(sn=%s)" group_search_base_dn="ou=users,dc=techtel,dc=com" group_search_filter="(&(objectClass=group)(member=%d))" lookup_bind_dn="cn=adminuser,dc=techtel,dc=com" lookup_bind_password="admin123" comment="OpenLDAP Test Server"
                 mc admin service restart minioserver/
                 sleep 3s
@@ -154,21 +154,21 @@ spec:
             claimName: minio-pvc-4
       restartPolicy: Always
 ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: minio-service
-# spec:
-#   type: NodePort
-#   ports:
-#   - name: http
-#     port: 9000
-#     protocol: TCP
-#     targetPort: 9000
-#   - name: console-port
-#     port: 9090
-#     protocol: TCP
-#     targetPort: 9090
-#     nodePort: 32322
-#   selector:
-#     app: minio
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  - name: console-port
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+    nodePort: 32322
+  selector:
+    app: minio

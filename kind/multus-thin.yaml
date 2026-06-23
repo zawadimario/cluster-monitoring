@@ -130,14 +130,15 @@ data:
               "datastore_type": "kubernetes",
               "ipam": {
                 "type": "calico-ipam",
-                "assign_ipv4": "true"
+                "assign_ipv4": "true",
+                "assign_ipv6": "true"
               },
               "kubernetes": {
                 "kubeconfig": "/etc/cni/net.d/calico-kubeconfig"
               },
               "log_level": "info",
               "log_file_path": "/var/log/calico/cni/cni.log",
-              "mtu": 9000,
+              "mtu": 1480,
               "nodename": "__KUBERNETES_NODE_NAME__",
               "policy": {
                 "type": "k8s"
@@ -147,7 +148,14 @@ data:
               "type": "tuning",
               "sysctl": {
                 "net.ipv4.conf.all.arp_notify": "1",
-                "net.ipv4.conf.default.arp_notify": "1"
+                "net.ipv4.conf.default.arp_notify": "1",
+                "net.ipv6.conf.all.accept_ra": "0",
+                "net.ipv6.conf.default.accept_ra": "0",
+                "net.ipv6.conf.lo.accept_ra": "0",
+                "net.ipv6.conf.all.accept_dad": "0",
+                "net.ipv6.conf.default.accept_dad": "0",
+                "net.ipv6.conf.all.ndisc_notify": "1",
+                "net.ipv6.conf.default.ndisc_notify": "1"
               }
             },
             {

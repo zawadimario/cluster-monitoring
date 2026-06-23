@@ -7,7 +7,7 @@ spec:
   - ReadWriteMany
   resources:
     requests:
-      storage: 500Mi
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -141,7 +141,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: wordpressmsql-mysql
+  name: wordpresmsql-mysql-01-0
 spec:
   type: ClusterIP
   ports:
@@ -182,7 +182,7 @@ spec:
     spec:
       containers:
       - name: wordpress
-        image: wordpress
+        image: wordpress:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
@@ -194,7 +194,7 @@ spec:
         - name: WORDPRESS_DB_NAME
           value: wordpress
         - name: WORDPRESS_DB_HOST
-          value: wordpressmsql-mysql.default.svc.cluster.local:3306
+          value: wordpresmsql-mysql-01-0.default.svc.cluster.local:3306
         volumeMounts:
         - name: wordpress-storage
           mountPath: /var/www/html
