@@ -1,0 +1,12 @@
+# Adopted from https://github.com/kubernetes-csi/csi-driver-nfs
+resources:
+  - rbac-csi-nfs.yaml
+  - rbac-snapshot-controller.yaml
+  - csi-nfs-driverinfo.yaml
+  - csi-nfs-controller.yaml
+  - csi-nfs-node.yaml
+  - crd-csi-snapshot.yaml
+  - csi-snapshot-controller.yaml
+  - snapshotclass.yaml
+  - storageclasses.yaml
+  - csi-driver-nfs-server.yaml

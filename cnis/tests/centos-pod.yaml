@@ -1,0 +1,56 @@
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: pod-case-05
+# spec:
+#   containers:
+#   - name: pod-case-05
+#     image: docker.io/centos/tools:latest
+#     command:
+#     - /sbin/init
+#     # securityContext:
+#     #   capabilities:
+#     #     add:
+#     #     - SYS_ADMIN
+#     securityContext:
+#       privileged: true
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   # name: pod-case-05
+#   name: we-are-trying-to-test-a-case-where-we-create-a-pod-with-a-name-too-long-and-see-what-happens
+# spec:
+#   containers:
+#   - name: pod-case-05
+#     image: docker.io/centos/tools:latest
+#     command:
+#     - /sbin/init
+    # securityContext:
+    #   capabilities:
+    #     add:
+    #     - SYS_ADMIN
+    # securityContext:
+    #   privileged: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: we-are-trying-to-test-a-case-where-we-create-a-pod-with-a-name-too-long-and-see-what-happens
+  labels:
+    reason: pod-case-05
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      reason: pod-case-05
+  template:
+    metadata:
+      labels:
+        reason: pod-case-05
+    spec:
+      containers:
+      - name: pod-case-05
+        image: docker.io/centos/tools:latest
+        command:
+        - /sbin/init

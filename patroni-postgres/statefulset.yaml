@@ -22,6 +22,9 @@ spec:
         application: tectel
         cluster-name: *cluster_name
     spec:
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -47,6 +50,10 @@ spec:
             - mountPath: /home/postgres/pgdata/pgroot/pg_log
               subPath: pgroot/pg_log
               name: pgdata
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "echo \"alias tsql='PGPASSWORD=\\$PATRONI_SUPERUSER_PASSWORD psql -h localhost -p 5432 -U postgres -d postgres'\" >> /home/postgres/.bashrc"]
           env:
             - name: PATRONI_KUBERNETES_POD_IP
               valueFrom:
@@ -109,6 +116,8 @@ spec:
             - name: PATRONI_RESTAPI_LISTEN
               value: "0.0.0.0:8008"
             - name: PATRONI_LOG_DIR
+              value: /home/postgres/pgdata
+            - name: PATRONI_LOG_DIR
               value: /home/postgres/pgdata/pgroot/pg_log
             - name: PATRONI_LOG_FILE_NUM
               value: "6"
@@ -152,4 +161,4 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 8Gi
+          storage: 5Gi

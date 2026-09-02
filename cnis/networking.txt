@@ -1,0 +1,53 @@
+lspci
+
+sudo modprobe dummy
+sudo ip link add name fake-vf0 type dummy
+sudo ip link add name fake-vf1 type dummy
+sudo ip link set fake-vf0 up
+sudo ip link set fake-vf1 up
+ethtool -i fake-vf0 | grep driver
+
+#######
+ip link show type veth
+ip link show <if>
+ip addr
+ip route
+ip route get <ip-addr>
+ip addr
+tshark -i eth0 -V -Y "http" <== look for Frame, Ethernet, Internet Protocol Version, Transmission Control Protocol, Hypertext Transfer Protocol
+
+######
+CoreDNS
+
+kubectl get pods -n kube-system | grep coredns
+
+nslookup <svc-name>.<ns>.svc.cluster.local <dns-pod-ip>
+
+kubectl exec -it pod -- cat /etc/resolv.conf
+
+➜  ~ k get pods -n kube-system -owide | grep coredns
+coredns-7d764666f9-765bd                   1/1     Running   2 (14h ago)   6d1h   10.244.120.69    minikube       <none>           <none>
+coredns-7d764666f9-bbwp6                   1/1     Running   2 (14h ago)   6d1h   10.244.120.70    minikube       <none>           <none>
+➜  ~ k get svc -owide 
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE    SELECTOR
+centos       ClusterIP   10.110.87.173   <none>        80/TCP    21h    server=linux
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP   6d1h   <none>
+➜  ~ minikube ssh --node minikube-m02 -- sudo su -
+root@minikube-m02:~# 
+root@minikube-m02:~# 
+root@minikube-m02:~# nslookup centos.default.svc.cluster.local 10.244.120.69
+Server:		10.244.120.69
+Address:	10.244.120.69#53
+
+Name:	centos.default.svc.cluster.local
+Address: 10.110.87.173
+
+root@minikube-m02:~# 
+root@minikube-m02:~# nslookup centos.default.svc.cluster.local 10.244.120.70
+Server:		10.244.120.70
+Address:	10.244.120.70#53
+
+Name:	centos.default.svc.cluster.local
+Address: 10.110.87.173
+
+root@minikube-m02:~#

@@ -1,0 +1,25 @@
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: mutate-pvc-storageclasses
+  annotations:
+    policies.kyverno.io/title: "Enforce Access-Mode Specific StorageClasses"
+    policies.kyverno.io/description: "Injects tectelio for RWO and tectelio-rwx for RWX PVCs using native JSONPatch expressions."
+spec:
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["persistentvolumeclaims"]
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >
+          object.spec.accessModes.exists(mode, mode == 'ReadWriteMany') ?
+          [JSONPatch{op: "add", path: "/spec/storageClassName", value: "tectel-rwx"}] :
+          (object.spec.accessModes.exists(mode, mode == 'ReadWriteOnce') ?
+          [JSONPatch{op: "add", path: "/spec/storageClassName", value: "tectel"}] : [])

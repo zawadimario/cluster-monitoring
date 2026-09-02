@@ -1,7 +1,9 @@
 resources:
+- 0-metrics-server.yaml
 - 1-cadvisor.yaml
 - 2-prometheus-rbac.yaml
 - 3-prometheus.yaml
+- 3-node-exporter.yaml
 - 4-alertmanager.yaml
 # - 5-grafana.yaml
 - 6-grafana-ldap.yaml

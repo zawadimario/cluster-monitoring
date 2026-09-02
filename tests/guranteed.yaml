@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tc01-guaranteed-basic
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    command:
+      - /bin/sh
+      - -c
+      - sleep 3600
+    resources:
+      requests:
+        cpu: 0.2
+        memory: "200Mi"
+      limits:
+        cpu: 0.2
+        memory: "200Mi"
+  - name: busybox
+    image: busybox
+    command:
+      - /bin/sh
+      - -c
+      - sleep 3600
+    resources:
+      requests:
+        cpu: 0.2
+        memory: "200Mi"
+      limits:
+        cpu: 0.2
+        memory: "200Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tc01-guaranteed-basic
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tc01-guaranteed-basic
+  template:
+    metadata:
+      labels:
+        app: tc01-guaranteed-basic
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        command:
+          - /bin/sh
+          - -c
+          - sleep 3600
+        resources:
+          requests:
+            cpu: 0.2
+            memory: "200Mi"
+          limits:
+            cpu: 0.2
+            memory: "200Mi"
+      - name: busybox
+        image: busybox
+        command:
+          - /bin/sh
+          - -c
+          - sleep 3600
+        resources:
+          requests:
+            cpu: 0.2
+            memory: "200Mi"
+          limits:
+            cpu: 0.2
+            memory: "200Mi"

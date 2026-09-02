@@ -107,28 +107,17 @@ spec:
       labels:
         tier: grafana
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
       securityContext:
         fsGroup: 472
         supplementalGroups:
           - 0
-        # Enable the following to install grafana plugins at startup if needed
-      # initContainers:
-      # - name: install-grafana-plugins
-      #   image: grafana/grafana-oss:main
-      #   securityContext:
-      #     runAsUser: 0
-      #   command:
-      #     - sh
-      #     - -c
-      #     - |
-      #       set -eux
-      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/release/main/any/grafana-lokiexplore-app-main.zip plugins install grafana-lokiexplore-app
-      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-pyroscope-app/release/1.10.1/grafana-pyroscope-app-1.10.1.zip plugins install grafana-pyroscope-app
-      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-exploretraces-app/release/1.2.0/grafana-exploretraces-app-1.2.0.zip plugins install grafana-exploretraces-app
-      #       grafana cli --insecure --pluginUrl https://storage.googleapis.com/grafana-plugins-catalog/grafana-metricsdrilldown-app/release/1.0.18/grafana-metricsdrilldown-app-1.0.18.zip plugins install grafana-metricsdrilldown-app
-      #   volumeMounts:
-      #   - name: grafana-plugins
-      #     mountPath: /var/lib/grafana/plugins
       containers:
       - image: grafana/grafana-oss:main
         imagePullPolicy: IfNotPresent

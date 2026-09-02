@@ -1,0 +1,33 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-disable-servicelinks
+  annotations:
+    policies.kyverno.io/title: Disable Service Links with Namespace Exemptions
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: medium
+spec:
+  background: false
+  rules:
+    - name: set-enableservicelinks-false
+      match:
+        any:
+        - resources:
+            kinds:
+            - Pod
+            - Deployment
+            - StatefulSet
+            - DaemonSet
+            - Job
+      exclude:
+        any:
+        - resources:
+            namespaces:
+              - kube-system
+              - kyverno
+              - kube-node-lease
+              - kube-public
+      mutate:
+        patchStrategicMerge:
+          spec:
+            enableServiceLinks: false

@@ -1,0 +1,23 @@
+lspci
+lspci -vvv
+lspci -vvv | grep -i "sriov"
+ip link show
+cat /sys/class/net/eth0/device/sriov_totalvfs
+
+# Enable 8 virtual functions on the physical interface
+echo 8 | sudo tee /sys/class/net/eth0/device/sriov_numvfs
+
+# Verify the VFs were created
+lspci | grep "Virtual Function"
+
+# List the VF interfaces
+ip link show eth0
+
+# SR-IOV emulation
+# Generate two soft interfaces directly under the discovered PCI parent
+ip link add link eth0 name eth0v0 type macvlan mode bridge
+ip link add link eth0 name eth0v1 type macvlan mode bridge
+
+# Bring them online
+ip link set eth0v0 up
+ip link set eth0v1 up

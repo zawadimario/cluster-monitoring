@@ -1,3 +1,5 @@
-psql -h patronitectel -U postgres -p 5432 postgres
+psql -h patronitectel -U postgres -p 5432 postgres -d postgres -P zalando
 pass: zalando
 select datname,usename,application_name,client_addr,client_hostname,client_port from pg_stat_activity;
+
+PGPASSWORD='zalando' psql -h localhost -p 5432 -U postgres -d postgres
