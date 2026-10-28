@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alpine-ping-dockerfile
+data:
+  Dockerfile.ping: |
+    FROM alpine:latest
+    RUN apk update && apk add --no-cache iputils
+    CMD ["ping", "-c", "10", "8.8.8.8"]
+  Dockerfile.python: |
+    FROM python:3.12-slim
+    CMD ["python", "-c", "print('Hello World')"]
+  Dockerfile.golang: |
+    FROM golang:1.23-alpine
+    CMD sh -c 'echo "package main; import \"fmt\"; func main(){fmt.Println(\"Hello World\")}" > main.go && go run main.go'
+
+# docker build -t ping --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.ping .
+# docker build -t hello-golang --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.golang .
+# docker build -t hello-python --platform=linux/amd64,linux/arm64,linux/arm/v7,linux/ppc64le -f Dockerfile.python .
+# docker images --tree
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-case-dind
+spec:
+  hostNetwork: true
+  containers:
+  - name: pod-case-dind
+    image: docker:29.0.4-dind-alpine3.22
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              apk update && apk upgrade
+              apk add bash
+    volumeMounts:
+    - name: dind-storage
+      mountPath: /var/lib/docker
+    - name: dockerfile-volume
+      mountPath: /home
+      readOnly: false
+    resources: {}
+  volumes:
+  - name: dind-storage
+    emptyDir: {}
+  - name: dockerfile-volume
+    configMap:
+      name: alpine-ping-dockerfile

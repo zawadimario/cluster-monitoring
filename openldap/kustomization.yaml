@@ -1,0 +1,6 @@
+resources:
+- base/configmap.yaml
+- base/serviceaccount.yaml
+- base/statefulset.yaml
+- base/service.yaml
+# - base/statefulset-ui.yaml

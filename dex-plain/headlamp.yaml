@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: headlamp
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headlamp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: headlamp
+  namespace: kube-system
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: headlamp
+  template:
+    metadata:
+      labels:
+        k8s-app: headlamp
+    spec:
+      serviceAccountName: headlamp
+      containers:
+      - name: headlamp
+        image: ghcr.io/headlamp-k8s/headlamp
+        imagePullPolicy: IfNotPresent
+        args:
+        - -in-cluster
+        - -plugins-dir=/headlamp/plugins
+        - -log-level=debug
+        - -insecure-ssl
+        - -metrics-enabled=true
+        - -stdout-trace-enabled
+        - -in-cluster-context-name=minikube
+        - -oidc-client-id=headlamp-app
+        - -oidc-client-secret=headlamp-app-secret
+        - -oidc-idp-issuer-url=http://dex.auth.svc.cluster.local:5556/dex
+        - -oidc-scopes=profile,email,openid
+        env:
+        - name: HEADLAMP_CONFIG_TRACING_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_METRICS_ENABLED
+          value: "true"
+        - name: HEADLAMP_CONFIG_SERVICE_NAME
+          value: "headlamp"
+        - name: HEADLAMP_CONFIG_SERVICE_VERSION
+          value: "latest"
+        - name: HEADLAMP_CHECK_FOR_UPDATES
+          value: "true"
+        ports:
+        - containerPort: 4466
+          name: http
+        - containerPort: 9090
+          name: metrics
+        resources: {}   
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubernetesui-headlamp
+  namespace: kube-system
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 4466
+  selector:
+    k8s-app: headlamp

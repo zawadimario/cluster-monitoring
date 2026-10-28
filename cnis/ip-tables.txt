@@ -1,0 +1,113 @@
+iptables -n -t nat -L KUBE-SERVICES
+iptables -n -t nat -L KUBE-SVC-SR2X4JV74LANGPQL
+
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SERVICES
+Chain KUBE-SERVICES (2 references)
+target     prot opt source               destination         
+KUBE-SVC-JD5MR3NA4I4DYORP  6    --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:metrics cluster IP */ tcp dpt:9153
+KUBE-SVC-FDBELDMAIO7ICH32  6    --  0.0.0.0/0            10.111.90.236        /* observability/cadvisor cluster IP */ tcp dpt:8080
+KUBE-SVC-TCOU7JCQXEZGVUNU  17   --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:dns cluster IP */ udp dpt:53
+KUBE-SVC-ERIFXISQEP7F7OF4  6    --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:dns-tcp cluster IP */ tcp dpt:53
+KUBE-SVC-UTMDFSBAKNBOELFW  6    --  0.0.0.0/0            10.104.166.144       /* auth/openldap:tcp-ldap cluster IP */ tcp dpt:389
+KUBE-SVC-EW72NJC377LJ2ZZ3  6    --  0.0.0.0/0            10.100.224.235       /* observability/alertmanager:http cluster IP */ tcp dpt:9093
+KUBE-SVC-WH6QJSKOEK5ZCJJ5  6    --  0.0.0.0/0            10.97.140.102        /* observability/prometheus cluster IP */ tcp dpt:9090
+KUBE-SVC-RLVCQA5PBTOXRWKN  6    --  0.0.0.0/0            10.104.123.4         /* kube-system/calico-felix-metrics:metrics cluster IP */ tcp dpt:9091
+KUBE-SVC-Z4ANX4WAEWEBLCTM  6    --  0.0.0.0/0            10.96.186.87         /* kube-system/metrics-server:https cluster IP */ tcp dpt:443
+KUBE-SVC-TAHT4N6OZGOPRBOE  6    --  0.0.0.0/0            10.105.242.212       /* observability/node-exporter:metrics cluster IP */ tcp dpt:9100
+KUBE-SVC-NPX46M4PTMTKRN6Y  6    --  0.0.0.0/0            10.96.0.1            /* default/kubernetes:https cluster IP */ tcp dpt:443
+KUBE-SVC-SR2X4JV74LANGPQL  6    --  0.0.0.0/0            10.98.115.14         /* observability/grafana cluster IP */ tcp dpt:3000
+KUBE-NODEPORTS  0    --  0.0.0.0/0            0.0.0.0/0            /* kubernetes service nodeports; NOTE: this must be the last rule in this chain */ ADDRTYPE match dst-type LOCAL
+root@minikube-m02:~# 
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SVC-TAHT4N6OZGOPRBOE
+Chain KUBE-SVC-TAHT4N6OZGOPRBOE (1 references)
+target     prot opt source               destination         
+KUBE-MARK-MASQ  6    -- !10.244.0.0/16        10.105.242.212       /* observability/node-exporter:metrics cluster IP */ tcp dpt:9100
+KUBE-SEP-KJVMCG7BJOHLXILI  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.2:9100 */ statistic mode random probability 0.16666666651
+KUBE-SEP-PDIHPSMHH6QH6YJ6  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.3:9100 */ statistic mode random probability 0.20000000019
+KUBE-SEP-EB4NFUXCPC2LXAVO  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.4:9100 */ statistic mode random probability 0.25000000000
+KUBE-SEP-BCFMQLFTQ7N2T2II  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.5:9100 */ statistic mode random probability 0.33333333349
+KUBE-SEP-OSLYKDK3FN6LI7OZ  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.6:9100 */ statistic mode random probability 0.50000000000
+KUBE-SEP-ULCJW5UIITSJTUMH  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.7:9100 */
+root@minikube-m02:~# 
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SVC-TAHT4N6OZGOPRBOE
+Chain KUBE-SVC-TAHT4N6OZGOPRBOE (1 references)
+target     prot opt source               destination         
+KUBE-MARK-MASQ  6    -- !10.244.0.0/16        10.105.242.212       /* observability/node-exporter:metrics cluster IP */ tcp dpt:9100
+KUBE-SEP-KJVMCG7BJOHLXILI  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.2:9100 */ statistic mode random probability 0.16666666651
+KUBE-SEP-PDIHPSMHH6QH6YJ6  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.3:9100 */ statistic mode random probability 0.20000000019
+KUBE-SEP-EB4NFUXCPC2LXAVO  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.4:9100 */ statistic mode random probability 0.25000000000
+KUBE-SEP-BCFMQLFTQ7N2T2II  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.5:9100 */ statistic mode random probability 0.33333333349
+KUBE-SEP-OSLYKDK3FN6LI7OZ  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.6:9100 */ statistic mode random probability 0.50000000000
+KUBE-SEP-ULCJW5UIITSJTUMH  0    --  0.0.0.0/0            0.0.0.0/0            /* observability/node-exporter:metrics -> 192.168.49.7:9100 */
+root@minikube-m02:~# 
+logout
+➜  ~ k get svc -Aowide | grep 10.105.242.212
+observability   node-exporter          ClusterIP   10.105.242.212   <none>        9100/TCP                 5d1h   name=node-exporter
+➜  ~ k get po -Aowide | grep 192.168.49.2         
+kube-system     calico-node-m459s                          1/1     Running   1 (3d2h ago)   4d1h   192.168.49.2     minikube       <none>           <none>
+kube-system     etcd-minikube                              1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kindnet-879gl                              1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-apiserver-minikube                    1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-controller-manager-minikube           1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-multus-ds-fjkbj                       1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-proxy-96rn9                           1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-scheduler-minikube                    1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-sriov-device-plugin-arm64-7tldb       1/1     Running   1 (3d2h ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+kube-system     kube-vip-minikube                          1/1     Running   1 (135m ago)   135m   192.168.49.2     minikube       <none>           <none>
+kube-system     storage-provisioner                        1/1     Running   2 (135m ago)   5d2h   192.168.49.2     minikube       <none>           <none>
+observability   node-exporter-24f99                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.2     minikube       <none>           <none>
+➜  ~ 
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.2
+observability   node-exporter-24f99                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.2     minikube       <none>           <none>
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.3
+observability   node-exporter-5xcfj                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.3     minikube-m02   <none>           <none>
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.4
+observability   node-exporter-4jhg9                        1/1     Running   2 (135m ago)   5d1h   192.168.49.4     minikube-m03   <none>           <none>
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.5
+observability   node-exporter-26n2p                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.5     minikube-m04   <none>           <none>
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.6
+observability   node-exporter-bnpq9                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.6     minikube-m05   <none>           <none>
+➜  ~ k get po -Aowide | grep exporter | grep 192.168.49.7
+observability   node-exporter-2st24                        1/1     Running   1 (3d2h ago)   5d1h   192.168.49.7     minikube-m06   <none>           <none>
+
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SERVICES
+Chain KUBE-SERVICES (2 references)
+target     prot opt source               destination         
+KUBE-SVC-TCOU7JCQXEZGVUNU  17   --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:dns cluster IP */ udp dpt:53
+KUBE-SVC-ERIFXISQEP7F7OF4  6    --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:dns-tcp cluster IP */ tcp dpt:53
+KUBE-SVC-UTMDFSBAKNBOELFW  6    --  0.0.0.0/0            10.104.166.144       /* auth/openldap:tcp-ldap cluster IP */ tcp dpt:389
+KUBE-SVC-EW72NJC377LJ2ZZ3  6    --  0.0.0.0/0            10.100.224.235       /* observability/alertmanager:http cluster IP */ tcp dpt:9093
+KUBE-SVC-WH6QJSKOEK5ZCJJ5  6    --  0.0.0.0/0            10.97.140.102        /* observability/prometheus cluster IP */ tcp dpt:9090
+KUBE-SVC-RLVCQA5PBTOXRWKN  6    --  0.0.0.0/0            10.104.123.4         /* kube-system/calico-felix-metrics:metrics cluster IP */ tcp dpt:9091
+KUBE-SVC-Z4ANX4WAEWEBLCTM  6    --  0.0.0.0/0            10.96.186.87         /* kube-system/metrics-server:https cluster IP */ tcp dpt:443
+KUBE-SVC-TAHT4N6OZGOPRBOE  6    --  0.0.0.0/0            10.105.242.212       /* observability/node-exporter:metrics cluster IP */ tcp dpt:9100
+KUBE-SVC-NPX46M4PTMTKRN6Y  6    --  0.0.0.0/0            10.96.0.1            /* default/kubernetes:https cluster IP */ tcp dpt:443
+KUBE-SVC-SR2X4JV74LANGPQL  6    --  0.0.0.0/0            10.98.115.14         /* observability/grafana cluster IP */ tcp dpt:3000
+KUBE-SVC-JD5MR3NA4I4DYORP  6    --  0.0.0.0/0            10.96.0.10           /* kube-system/kube-dns:metrics cluster IP */ tcp dpt:9153
+KUBE-SVC-FDBELDMAIO7ICH32  6    --  0.0.0.0/0            10.111.90.236        /* observability/cadvisor cluster IP */ tcp dpt:8080
+KUBE-SVC-QSBGGKMJVMEBSQHS  6    --  0.0.0.0/0            10.110.87.173        /* default/centos:http cluster IP */ tcp dpt:80
+KUBE-NODEPORTS  0    --  0.0.0.0/0            0.0.0.0/0            /* kubernetes service nodeports; NOTE: this must be the last rule in this chain */ ADDRTYPE match dst-type LOCAL
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SERVICES | wc -l
+16
+root@minikube-m02:~# 
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SVC-QSBGGKMJVMEBSQHS
+Chain KUBE-SVC-QSBGGKMJVMEBSQHS (1 references)
+target     prot opt source               destination         
+KUBE-MARK-MASQ  6    -- !10.244.0.0/16        10.110.87.173        /* default/centos:http cluster IP */ tcp dpt:80
+KUBE-SEP-CSBTXYVLGNCJCJY2  0    --  0.0.0.0/0            0.0.0.0/0            /* default/centos:http -> 10.244.118.195:80 */ statistic mode random probability 0.25000000000
+KUBE-SEP-KKU2B2YF32OGQGIO  0    --  0.0.0.0/0            0.0.0.0/0            /* default/centos:http -> 10.244.151.4:80 */ statistic mode random probability 0.33333333349
+KUBE-SEP-WGWZQ22LK2UKNUAJ  0    --  0.0.0.0/0            0.0.0.0/0            /* default/centos:http -> 10.244.205.193:80 */ statistic mode random probability 0.50000000000
+KUBE-SEP-N5TLT3T36QPECRIE  0    --  0.0.0.0/0            0.0.0.0/0            /* default/centos:http -> 10.244.59.130:80 */
+root@minikube-m02:~# 
+root@minikube-m02:~# iptables -n -t nat -L KUBE-SEP-CSBTXYVLGNCJCJY2
+Chain KUBE-SEP-CSBTXYVLGNCJCJY2 (1 references)
+target     prot opt source               destination         
+KUBE-MARK-MASQ  0    --  10.244.118.195       0.0.0.0/0            /* default/centos:http */
+DNAT       6    --  0.0.0.0/0            0.0.0.0/0            /* default/centos:http */ tcp to:10.244.118.195:80
+root@minikube-m02:~# 
+logout
+➜  ~ k get po -Aowide | grep centos
+default         centos-docker                              1/1     Running   0               175m    10.244.59.130    minikube-m04   <none>           <none>
+default         centos-gcrio                               1/1     Running   0               175m    10.244.118.195   minikube-m06   <none>           <none>
+default         centos-ghcrio                              1/1     Running   0               175m    10.244.151.4     minikube-m03   <none>           <none>
+default         centos-quayio                              1/1     Running   0               175m    10.244.205.193   minikube-m02   <none>           <none>

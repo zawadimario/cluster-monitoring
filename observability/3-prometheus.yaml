@@ -1,0 +1,410 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-server-conf
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      keep_dropped_targets: 100
+      sample_limit: 500000
+    scrape_configs:
+      - job_name: 'prometheus'
+        scrape_interval: 10s
+        static_configs:
+        - targets: ['prometheus.observability:9090']
+          labels:
+            tier: 'prometheus'
+
+      - job_name: 'redis-exporter'
+        scrape_interval: 30s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ["svc-redis-exporter.redis:9121"]
+
+      - job_name: 'calico-felix'
+        scrape_interval: 30s
+        metrics_path: /metrics
+        static_configs:
+        - targets:
+          - "calico-felix-metrics.kube-system.svc.cluster.local:9091"
+
+      - job_name: 'mysqld-exporter'
+        metrics_path: /probe
+        static_configs:
+        - targets: ['mysql.default:3306']
+        relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: mysql-exporter.default:9104
+
+      - job_name: 'postgres-exporter'
+        scrape_interval: 15s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ['postgres-exporter.postgres:9187']
+
+      - job_name: 'postgres-patroni-exporter'
+        scrape_interval: 30s
+        metrics_path: /metrics
+        static_configs:
+        - targets: ['patroni-postgres-exporter.tectelio:9187']
+
+      - job_name: 'patroni-metrics'
+        metrics_path: /metrics
+        static_configs:
+        - targets: ['patronitectel-metrics.tectelio:8008']
+
+      - job_name: 'cadvisor'
+        static_configs:
+        - targets: ['cadvisor.observability.svc:8080']
+          labels:
+            name: 'cadvisor'
+
+      - job_name: 'minio-aistor'
+        scrape_interval: 30s
+        metrics_path: /minio/metrics/v3
+        static_configs:
+        - targets: ['minio-service.default:9000']
+          labels:
+            app: minio
+
+      - job_name: 'node-exporter'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_endpoints_name]
+          regex: 'node-exporter'
+          action: keep
+
+      - job_name: 'kube-state-metrics'
+        static_configs:
+        - targets: ['kube-state-metrics.kube-system:8080']
+          labels:
+            app.kubernetes.io/name: kube-state-metrics
+
+      - job_name: 'kubernetes-nodes'
+        scrape_interval: 15s
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics
+
+      - job_name: "kubernetes-cadvisor"
+        scrape_interval: 15s
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+        - source_labels: [__meta_kubernetes_node_name]
+          regex: (.+)
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+
+      - job_name: "kubernetes-services"
+        scrape_interval: 30s
+        scheme: http
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_service_name]
+          target_label: service
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          target_label: prometheus_io_scrape
+          action: replace
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          regex: .*
+          action: keep
+        - source_labels: [__meta_kubernetes_namespace]
+          regex: kube-system|kube-public|kube-node-lease
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: default;kubernetes
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: tectelio;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
+     
+      - job_name: 'kube-proxy'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+        - role: node
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_node_name]
+          target_label: __address__
+          regex: (.+)
+          replacement: ${1}:10249
+        - target_label: __metrics_path__
+          replacement: /metrics
+              
+      - job_name: 'kube-dns'
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names: ['kube-system']
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          regex: kube-dns;metrics
+          action: keep
+
+      - job_name: "kubernetes-apiservers"
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+        - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        authorization:
+          credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: default;kubernetes;https
+
+      - job_name: "application-pods"
+        scrape_interval: 30s
+        kubernetes_sd_configs:
+        - role: pod
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_pod_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_pod_name]
+          action: replace
+          target_label: pod
+        - source_labels: [__meta_kubernetes_namespace]
+          regex: kube-system|kube-public|kube-node-lease
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace,__meta_kubernetes_pod_name]
+          regex: tectelio;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
+
+      - job_name: "kubernetes-service-endpoints"
+        scrape_interval: 30s
+        scheme: http
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+        - role: endpoints
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_namespace]
+          action: replace
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_service_name]
+          action: replace
+          target_label: service
+        - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          target_label: prometheus_io_scrape
+          action: replace
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          regex: .*
+          action: keep
+        - source_labels: [__meta_kubernetes_namespace]
+          regex: kube-system|kube-public|kube-node-lease
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: default;kubernetes
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: postgres;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: tectelio;.*
+          action: drop
+        - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name]
+          regex: auth;.*
+          action: drop
+
+      - job_name: "kubelet"
+        scheme: https
+        kubernetes_sd_configs:
+        - role: node
+        tls_config:
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+
+    alerting:
+      alertmanagers:
+      - static_configs:
+        - targets:
+          - alertmanager.observability:9093
+    rule_files:
+    - "alert-rules.yml"
+  alert-rules.yml: |
+    groups:
+    - name: WeekendAlerts
+      rules:
+        - alert: WeekendAlert
+          expr: |
+            (day_of_week() < 6) and (up == 0)
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Service down on a weekday"
+            description: "The 'up' metric is 0, meaning a target is down, but only triggers on weekdays (Mon-Fri)."
+    - name: kube-state-metrics
+      rules:
+        - alert: KubeStateMetricsListErrors
+          annotations:
+            description: kube-state-metrics is experiencing errors at an elevated rate in list operations. This is likely causing it to not be able to expose metrics about Kubernetes objects correctly or at all.
+            summary: kube-state-metrics is experiencing errors in list operations.
+          expr: |
+            (sum(rate(kube_state_metrics_list_total{job="kube-state-metrics",result="error"}[5m])) by (cluster)
+              /
+            sum(rate(kube_state_metrics_list_total{job="kube-state-metrics"}[5m])) by (cluster))
+            > 0.01
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsWatchErrors
+          annotations:
+            description: kube-state-metrics is experiencing errors at an elevated rate in watch operations. This is likely causing it to not be able to expose metrics about Kubernetes objects correctly or at all.
+            summary: kube-state-metrics is experiencing errors in watch operations.
+          expr: |
+            (sum(rate(kube_state_metrics_watch_total{job="kube-state-metrics",result="error"}[5m])) by (cluster)
+              /
+            sum(rate(kube_state_metrics_watch_total{job="kube-state-metrics"}[5m])) by (cluster))
+            > 0.01
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsShardingMismatch
+          annotations:
+            description: kube-state-metrics pods are running with different --total-shards configuration, some Kubernetes objects may be exposed multiple times or not exposed at all.
+            summary: kube-state-metrics sharding is misconfigured.
+          expr: |
+            stdvar (kube_state_metrics_total_shards{job="kube-state-metrics"}) by (cluster) != 0
+          for: 15m
+          labels:
+            severity: critical
+        - alert: KubeStateMetricsShardsMissing
+          annotations:
+            description: kube-state-metrics shards are missing, some Kubernetes objects are not being exposed.
+            summary: kube-state-metrics shards are missing.
+          expr: |
+            2^max(kube_state_metrics_total_shards{job="kube-state-metrics"}) by (cluster) - 1
+              -
+            sum( 2 ^ max by (cluster, shard_ordinal) (kube_state_metrics_shard_ordinal{job="kube-state-metrics"}) ) by (cluster)
+            != 0
+          for: 15m
+          labels:
+            severity: critical
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      tier: prometheus
+  template:
+    metadata:
+      labels:
+        tier: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        args:
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --storage.tsdb.retention.time=2d
+        - --storage.tsdb.no-lockfile
+        - --web.enable-lifecycle
+        - --web.route-prefix=/
+        ports:
+        - containerPort: 9090
+        resources:
+          limits:
+            memory: 2000Mi
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-server-conf
+          defaultMode: 420
+      - name: prometheus-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: observability
+spec:
+  type: NodePort
+  selector:
+    tier: prometheus
+  ports:
+  - port: 9090
+    protocol: TCP
+    targetPort: 9090
+    nodePort: 30090
+  externalTrafficPolicy: Local
+  sessionAffinity: ClientIP

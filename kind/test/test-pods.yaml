@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: centos-docker
+  labels:
+    server: linux
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: server
+            operator: In
+            values:
+            - linux
+        topologyKey: "kubernetes.io/hostname"
+  containers:
+  - name: pod-case-0
+    image: docker.io/centos/tools:latest
+    command:
+    - /sbin/init
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
+              yum clean all
+              yum install -y net-tools iputils iproute
+  tolerations:
+  - operator: "Exists"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: centos-gcrio
+  labels:
+    server: linux
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: server
+            operator: In
+            values:
+            - linux
+        topologyKey: "kubernetes.io/hostname"
+  containers:
+  - name: pod-case-0
+    image: gcr.io/gcp-runtimes/centos7
+    command:
+    - /sbin/init
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
+              yum clean all
+              yum install -y net-tools iputils iproute
+  tolerations:
+  - operator: "Exists"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: centos-quayio
+  labels:
+    server: linux
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: server
+            operator: In
+            values:
+            - linux
+        topologyKey: "kubernetes.io/hostname"
+  containers:
+  - name: pod-case-0
+    image: quay.io/centos/centos:centos7
+    command:
+    - /sbin/init
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
+              yum clean all
+              yum install -y net-tools iputils iproute
+  tolerations:
+  - operator: "Exists"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: centos-ghcrio
+  labels:
+    server: linux
+spec:
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: server
+            operator: In
+            values:
+            - linux
+        topologyKey: "kubernetes.io/hostname"
+  containers:
+  - name: pod-case-0
+    image: ghcr.io/easybuilders/centos-7.9:latest
+    command:
+    - /sbin/init
+    lifecycle:
+      postStart:
+        exec:
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-Base.repo
+              sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-Base.repo
+              yum clean all
+              yum install -y net-tools iputils iproute
+  tolerations:
+  - operator: "Exists"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: centos
+spec:
+  selector:
+    server: linux
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80

@@ -1,0 +1,218 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim-wordpress
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysqlinit-configs-wordpress
+data:
+  custom.cnf: |
+    [mysqld]
+    character-set-server=utf8mb4
+    bind-address=0.0.0.0
+    max_allowed_packet=1G
+    innodb_buffer_pool_size=1G
+    collation-server=utf8mb4_unicode_ci
+
+  createdb.sql: |
+    create database if not exists wordpress;
+    create database if not exists recordings;
+    create user if not exists 'wordpress'@'%' identified by 'wordpress';
+    grant all privileges on wordpress.* to 'wordpress'@'%';
+    grant all privileges on recordings.* to 'wordpress'@'%';
+    create table wordpress.actor
+    (
+        ID int auto_increment,
+        FirstName  varchar(20) not null,
+        LastName   varchar(20) not null,
+        City varchar(20) default 'Tokyo' not null,
+        LastUpdate timestamp not null default current_timestamp on update current_timestamp,
+        constraint actor_pk
+            primary key (ID),
+        constraint actor_pk2
+            unique (FirstName, LastName)
+    );
+    create table recordings.album
+    (
+        ID int auto_increment not null,
+        Title varchar(128) not null,
+        Artist varchar(255) not null,
+        Price decimal(5, 2) not null,
+        LastUpdate timestamp not null default current_timestamp on update current_timestamp,
+        primary key (id),
+        unique key (title, artist, price)
+    );
+    insert into recordings.album
+    (Title, Artist, Price)
+    values
+        ('Blue Train', 'John Coltrane', 56.99),
+        ('Giant Steps', 'John Coltrane', 63.99),
+        ('Jeru', 'Gerry Mulligan', 17.99),
+        ('Sarah Vaughan', 'Sarah Vaughan', 34.98);
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mysql-wordpress
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: mysql-secret
+type: Opaque
+data:
+  .password: cm9vdA==
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-wordpress
+  labels:
+    app: mysql-wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-wordpress
+  serviceName: mysql-wordpress
+  template:
+    metadata:
+      labels:
+        app: mysql-wordpress
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: mysql-wordpress
+      containers:
+      - image: mysql:9.4
+        name: mysql
+        imagePullPolicy: IfNotPresent
+        args:
+        - --disable-log-bin
+        - --authentication-policy=caching_sha2_password
+        - --datadir
+        - /var/lib/mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: .password
+        - name: TZ
+          value: "Asia/Tokyo"
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+        - mountPath: /etc/mysql/conf.d/custom.cnf
+          name: mysql-server
+          subPath: custom.cnf
+          readOnly: true
+        - mountPath: /docker-entrypoint-initdb.d/createdb.sql
+          name: mysql-server
+          subPath: createdb.sql
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 800Mi
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim-wordpress
+      - name: mysql-server
+        configMap:
+          name: mysqlinit-configs-wordpress
+          items:
+          - key: custom.cnf
+            path: custom.cnf
+          - key: createdb.sql
+            path: createdb.sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpresmsql-mysql-01-0
+spec:
+  type: ClusterIP
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  selector:
+    app: mysql-wordpress
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress-pv-claim
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  labels:
+    app: wordpress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: wordpress
+        image: wordpress:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        env:
+        - name: WORDPRESS_DB_USER
+          value: wordpress
+        - name: WORDPRESS_DB_PASSWORD
+          value: wordpress
+        - name: WORDPRESS_DB_NAME
+          value: wordpress
+        - name: WORDPRESS_DB_HOST
+          value: wordpresmsql-mysql-01-0.default.svc.cluster.local:3306
+        volumeMounts:
+        - name: wordpress-storage
+          mountPath: /var/www/html
+        resources: {}
+      volumes:
+      - name: wordpress-storage
+        persistentVolumeClaim:
+          claimName: wordpress-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+spec:
+  type: NodePort
+  selector:
+    app: wordpress
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080

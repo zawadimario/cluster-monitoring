@@ -1,0 +1,164 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: &cluster_name patronitectel
+  namespace: tectelio
+  labels:
+    application: tectel
+    cluster-name: *cluster_name
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
+  replicas: 3
+  serviceName: *cluster_name
+  selector:
+    matchLabels:
+      application: tectel
+      cluster-name: *cluster_name
+  template:
+    metadata:
+      labels:
+        application: tectel
+        cluster-name: *cluster_name
+    spec:
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      serviceAccountName: patronitectel
+      containers:
+        - name: *cluster_name
+          image: zawadimario/patroni-test:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8008
+              protocol: TCP
+            - containerPort: 5432
+              protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /home/postgres/pgdata
+              name: pgdata
+            - mountPath: /home/postgres/pgdata/pgroot/pg_log
+              subPath: pgroot/pg_log
+              name: pgdata
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", "echo \"alias tsql='PGPASSWORD=\\$PATRONI_SUPERUSER_PASSWORD psql -h localhost -p 5432 -U postgres -d postgres'\" >> /home/postgres/.bashrc"]
+          env:
+            - name: PATRONI_KUBERNETES_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: PATRONI_KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PATRONI_admin_PASSWORD
+              value: admin
+            - name: PATRONI_admin_OPTIONS
+              value: "createdb,createrole"
+            - name: PATRONI_KUBERNETES_BYPASS_API_SERVICE
+              value: "true"
+            - name: PATRONI_KUBERNETES_USE_ENDPOINTS
+              value: "true"
+            - name: PATRONI_KUBERNETES_LABELS
+              value: "{application: tectel, cluster-name: patronitectel}"
+            - name: PATRONI_SUPERUSER_USERNAME
+              value: postgres
+            - name: PATRONI_KUBERNETES_ROLE_LABEL
+              value: role
+            - name: PATRONI_KUBERNETES_LEADER_LABEL_VALUE
+              value: master
+            - name: PATRONI_KUBERNETES_FOLLOWER_LABEL_VALUE
+              value: replica
+            - name: PATRONI_KUBERNETES_STANDBY_LEADER_LABEL_VALUE
+              value: active_standby
+            # - name: PATRONI_CONFIGURATION
+            #   value: '{"postgresql":{"parameters":{"shared_buffers":"1024MB"}},"bootstrap":{"initdb":[{"auth-host":"md5"},{"auth-local":"trust"},"data-checksums",{"encoding":"UTF8"},{"locale":"en_US.UTF-8"}],"users":{"zalandos":{"password":"","options":["CREATEDB","NOLOGIN"]}},"dcs":{"ttl":30,"loop_wait":10,"retry_timeout":10,"maximum_lag_on_failover":1048576,"synchronous_mode":true,"synchronous_mode_strict":true,"postgresql":{"parameters":{"huge_pages":"off","max_connections":"400","ssl_ciphers":"HIGH:MEDIUM:-3DES:!aNULL","synchronous_standby_names":"*","tcp_keepalives_count":"4","tcp_keepalives_idle":"100","tcp_keepalives_interval":"5","wal_keep_segments":"100","wal_keep_size":"2GB"}}}}}'
+            - name: PATRONI_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: *cluster_name
+                  key: superuser-password
+            - name: PATRONI_REPLICATION_USERNAME
+              value: replicator
+            - name: PATRONI_REPLICATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: *cluster_name
+                  key: replication-password
+            - name: PATRONI_SCOPE
+              value: *cluster_name
+            - name: PATRONI_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PATRONI_RESTAPI_USERNAME
+              value: admin
+            - name: PATRONI_RESTAPI_PASSWORD
+              value: admin
+            - name: PATRONI_POSTGRESQL_DATA_DIR
+              value: /home/postgres/pgdata/pgroot/data
+            - name: PATRONI_POSTGRESQL_PGPASS
+              value: /tmp/pgpass
+            - name: PATRONI_POSTGRESQL_LISTEN
+              value: "0.0.0.0:5432"
+            - name: PATRONI_RESTAPI_LISTEN
+              value: "0.0.0.0:8008"
+            - name: PATRONI_LOG_DIR
+              value: /home/postgres/pgdata
+            - name: PATRONI_LOG_DIR
+              value: /home/postgres/pgdata/pgroot/pg_log
+            - name: PATRONI_LOG_FILE_NUM
+              value: "6"
+            - name: PATRONI_LOG_MODE
+              value: "0644"
+            - name: TZ
+              value: "Asia/Tokyo"
+          readinessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /readiness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              scheme: HTTP
+              path: /liveness
+              port: 8008
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 0
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      labels:
+        application: tectel
+        cluster-name: patronitectel
+      name: pgdata
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi

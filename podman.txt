@@ -1,0 +1,93 @@
+# PODMAN MACHINE
+podman machine init --cpus 8 --memory 15360 --disk-size 60
+podman machine start && podman machine ls
+
+# Config
+podman machine ssh --username root
+vi /etc/containers/registries.conf
+
+unqualified-search-registries = ["registry.fedoraproject.org", "registry.access.redhat.com", "docker.io", "registry-1.docker.io", "quay.io", "ghcr.io", "gcr.io", "registry.k8s.io", "registry.opensource.zalan.do"]
+
+[engine]
+dns = ['8.8.8.8', '8.8.4.4']
+[containers]
+dns = ["8.8.8.8", "1.1.1.1"]
+[[registry]]
+location = "ghcr.io"
+insecure = true
+[[registry]]
+location = "pkg-containers.githubusercontent.com"
+insecure = true
+
+=========================================================================
+# MINIKUBE
+
+minikube start --cpus=7 --memory=12g --disk-size=50g --container-runtime=cri-o --driver=podman
+minikube ssh -- sudo su
+
+# Use mount files on local machine
+mkdir -p ~/.minikube/files/etc/crio/crio.conf.d
+mkdir -p ~/.minikube/files/etc/containers
+
+vi ~/.minikube/files/etc/crio/crio.conf.d/02-insecure-registries.conf
+
+[crio.image]
+insecure_registries = [
+  "ghcr.io",
+  "pkg-containers.githubusercontent.com"
+]
+
+vi ~/.minikube/files/etc/containers/registries.conf
+
+unqualified-search-registries = ["registry.fedoraproject.org", "registry.access.redhat.com", "docker.io", "registry-1.docker.io", "quay.io", "ghcr.io", "gcr.io", "registry.k8s.io", "registry.opensource.zalan.do"]
+
+[engine]
+dns = ['8.8.8.8', '8.8.4.4']
+[containers]
+dns = ["8.8.8.8", "1.1.1.1"]
+[[registry]]
+location = "ghcr.io"
+insecure = true
+[[registry]]
+location = "pkg-containers.githubusercontent.com"
+insecure = true
+
+# minikube start --driver=podman
+
+# Check pods via k9s
+k9s -c pods --all-namespaces
+
+=========================================================================
+# MINIKUBE
+minikube start --cpus=7 --memory=12g --disk-size=50g --container-runtime=cri-o --driver=podman
+minikube ssh -- sudo su
+
+/etc/crio/crio.conf.d/02-insecure-registries.conf
+[crio.image]
+insecure_registries = [
+  "ghcr.io",
+  "pkg-containers.githubusercontent.com"
+]
+
+vi /etc/containers/registries.conf
+
+unqualified-search-registries = ["registry.fedoraproject.org", "registry.access.redhat.com", "docker.io", "registry-1.docker.io", "quay.io", "ghcr.io", "gcr.io", "registry.k8s.io", "registry.opensource.zalan.do"]
+
+[engine]
+dns = ['8.8.8.8', '8.8.4.4']
+[containers]
+dns = ["8.8.8.8", "1.1.1.1"]
+[[registry]]
+location = "ghcr.io"
+insecure = true
+[[registry]]
+location = "pkg-containers.githubusercontent.com"
+insecure = true
+
+systemctl restart crio
+systemctl status crio
+
+exit
+
+# Check pods via k9s
+k9s -c pods --all-namespaces

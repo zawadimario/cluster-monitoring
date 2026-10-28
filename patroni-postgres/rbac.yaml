@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: &cluster_name patronitectel
+  namespace: tectelio
+  labels:
+    application: patroni
+    cluster-name: *cluster_name
+type: Opaque
+data:
+  superuser-password: emFsYW5kbw==
+  replication-password: cmVwLXBhc3M=
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: patronitectel
+  namespace: tectelio
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: patronitectel
+  namespace: tectelio
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - patch
+  - update
+  - create
+  - list
+  - watch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: patronitectel
+  namespace: tectelio
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: patronitectel
+subjects:
+- kind: ServiceAccount
+  name: patronitectel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: patroni-k8s-ep-access
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  resourceNames:
+  - kubernetes
+  verbs:
+  - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: patroni-k8s-ep-access
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: patroni-k8s-ep-access
+subjects:
+- kind: ServiceAccount
+  name: patronitectel
+  namespace: tectelio
